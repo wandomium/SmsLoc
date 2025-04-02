@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+This file is part of SmsLoc.
+
+SmsLoc is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License,
+or (at your option) any later version.
+
+SmsLoc is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty
+of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
+-->
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    package="io.github.wandomium.smsloc"
+    android:installLocation="internalOnly">
+    <!--
+     The ACCESS_COARSE/FINE_LOCATION permissions are not required to use
+     Google Maps Android API v2, but you must specify either coarse or fine
+     location permissions for the "MyLocation" functionality.
+-->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+<!-- seems play store is not happy about this. proper way is to ask to open settings
+     we have another approach to this now
+    <uses-permission android:name="android.permission.IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+-->
+
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="true" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/smsloc_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/smsloc_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/LaunchTheme">
+
+        <activity
+            android:name="io.github.wandomium.smsloc.MainActivity"
+            android:label="@string/app_name"
+            android:exported="true">
+            <!--
+                        android:theme="@style/AppTheme.NoActionBar">
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <receiver
+            android:name="io.github.wandomium.smsloc.SmsReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name="io.github.wandomium.smsloc.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name="io.github.wandomium.smsloc.toolbox.NotificationHandler$NotGroupClearedRcvr"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="notification_cancelled"/>
+            </intent-filter>
+        </receiver>
+        <service
+            android:name="io.github.wandomium.smsloc.LocationRetrieverFgService"
+            android:foregroundServiceType="location"
+            android:enabled="true"
+            android:stopWithTask="false"/>
+    </application>
+    <!--
+    JobIntentService
+    When running on previous versions of the platform, this wake lock handling is emulated
+    in the class here by directly calling the PowerManager; this means the application
+    must request the Manifest.permission.WAKE_LOCK permission.
+    -->
+</manifest>

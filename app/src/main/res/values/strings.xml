@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">SmsLoc</string>
+    <string name="interval_hint">Time interval between GPS points</string>
+    <string name="shared_preferences_query_sent">com.example.loc.sent</string>
+    <string name="shared_preferences_query_rcvd">com.example.loc.rcvd</string>
+    <string name="shared_preferences_intent">sharedPerf</string>
+    <!-- ALERTS -->
+    <string name="force_stop_alert_title">Force Stop Warning</string>
+    <string name="force_stop_alert_msg">If the application is force stopped, Android will disable service wake up on SMS location requests.\n\nTo re-enable, app must be started manually once (this will re-register the service with the Android System)</string>
+    <string name="bg_autostart_alert_title">Background Autostart</string>
+    <string name="bg_autostart_alert_msg">Enable application background autostart (not applicable to all phones, needed on Xiaomi)</string>
+    <string name="battery_saver_alert_title">BATTERY SAVER ACTIVE</string>
+    <string name="battery_saver_alert_msg">Can interfere with responding to SMS requests.\nDisable in App Settings under Battery or BatterySaver</string>
+    <string name="notifications_alert_title">NOTIFICATIONS DISABLED</string>
+    <string name="notifications_alert_msg"></string>
+    <!-- APPLICATION SETTINGS -->
+    <string name="battery_saver_request_title">Battery Saver Exemption</string>
+    <string name="battery_saver_request_msg">To enable responding to SMS location queries disable battery optimization for this app (Under Battery or Battery Saver)</string>
+    <string name="notifications_request_title">Enable Notifications</string>
+    <string name="notifications_request_msg">""</string>
+    <!-- PERMISSION REASONS -->
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>

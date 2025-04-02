@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+This file is part of SmsLoc.
+
+SmsLoc is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License,
+or (at your option) any later version.
+
+SmsLoc is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty
+of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_tab_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.main.DebugTabFragment">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <Button
+            android:id="@+id/start_location_tracking"
+            android:layout_height="50dp"
+            android:layout_width="match_parent"
+            android:onClick="startLocationTracking"
+            android:text="Start Location Tracking"
+            android:padding="5dp"/>
+        <Button
+            android:id="@+id/stop_location_tracking"
+            android:layout_height="50dp"
+            android:layout_width="match_parent"
+            android:onClick="stopLocationTracking"
+            android:text="Stop Location Tracking"
+            android:padding="5dp"/>
+        <Button
+            android:id="@+id/get_last_location"
+            android:layout_height="50dp"
+            android:layout_width="match_parent"
+            android:onClick="getLastLocation"
+            android:text="Get Last Location"
+            android:padding="5dp"/>
+        <Button
+            android:id="@+id/clear_today_data"
+            android:layout_height="50dp"
+            android:layout_width="match_parent"
+            android:onClick="clearData"
+            android:text="Clear today data"
+            android:padding="5dp"/>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
