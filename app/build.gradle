@@ -9,7 +9,7 @@ android {
         applicationId "io.github.wandomium.smsloc"
         minSdk 30
         targetSdk 31
-        versionCode 240
+        versionCode 101
         versionName "1.0.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
