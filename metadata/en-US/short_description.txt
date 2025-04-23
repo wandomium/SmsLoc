@@ -1,0 +1,1 @@
+SMS based location query

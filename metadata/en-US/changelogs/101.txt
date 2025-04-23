@@ -1,0 +1,5 @@
+Added F-DROID metadata and readme
+
+Bugfixes:
+- Warning icon cleared only after restart and not on change of settings
+- Duplicate entries when removing and then adding a person
