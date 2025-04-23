@@ -162,7 +162,10 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                     case SmsLoc_Intents.ACTION_PERSON_REMOVED:
                         mParent.get().removePerson(addr);
                         break;
+                    default:
+                        return;
                 }
+                mParent.get()._listAdapter().notifyDataSetChanged();
             }
         });
 

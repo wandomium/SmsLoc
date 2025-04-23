@@ -8,9 +8,9 @@
     <string name="force_stop_alert_title">Force Stop Warning</string>
     <string name="force_stop_alert_msg">If the application is force stopped, Android will disable service wake up on SMS location requests.\n\nTo re-enable, app must be started manually once (this will re-register the service with the Android System)</string>
     <string name="bg_autostart_alert_title">Background Autostart</string>
-    <string name="bg_autostart_alert_msg">Enable application background autostart (not applicable to all phones, needed on Xiaomi)</string>
+    <string name="bg_autostart_alert_msg">On some phones, background autostart of applications needs to be explicitly enabled. Applicable on, for ex., Xiaomi MIUI (tested)</string>
     <string name="battery_saver_alert_title">BATTERY SAVER ACTIVE</string>
-    <string name="battery_saver_alert_msg">Can interfere with responding to SMS requests.\nDisable in App Settings under Battery or BatterySaver</string>
+    <string name="battery_saver_alert_msg">Can interfere with getting a GPS fix and running app in background.\nDisable in App Settings under Battery or BatterySaver</string>
     <string name="notifications_alert_title">NOTIFICATIONS DISABLED</string>
     <string name="notifications_alert_msg"></string>
     <!-- APPLICATION SETTINGS -->

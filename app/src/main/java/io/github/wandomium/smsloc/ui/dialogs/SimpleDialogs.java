@@ -30,6 +30,7 @@ import androidx.annotation.StringRes;
 
 import io.github.wandomium.smsloc.R;
 import io.github.wandomium.smsloc.MainActivity;
+import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.defs.SmsLoc_Permissions;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 import io.github.wandomium.smsloc.toolbox.NotificationHandler;
@@ -169,7 +170,7 @@ public class SimpleDialogs
                     activity.startActivityForResult(new Intent(
                             android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                             Uri.fromParts("package", activity.getPackageName(), "")
-                    ), 6564);
+                    ), SmsLoc_Intents.RESULT_BATT_SETTINGS);
                 } catch (ActivityNotFoundException e) {}
             });
         }
