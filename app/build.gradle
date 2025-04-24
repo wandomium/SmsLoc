@@ -9,8 +9,8 @@ android {
         applicationId "io.github.wandomium.smsloc"
         minSdk 30
         targetSdk 31
-        versionCode 101
-        versionName "1.0.1"
+        versionCode 102
+        versionName "1.0.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -27,6 +27,13 @@ android {
     }
     buildFeatures {
         viewBinding true
+    }
+
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs.
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles.
+        includeInBundle = false
     }
 }
 
