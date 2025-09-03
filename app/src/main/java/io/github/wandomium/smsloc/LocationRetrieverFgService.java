@@ -1,28 +1,30 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
 package io.github.wandomium.smsloc;
 
 import android.annotation.SuppressLint;
+import android.app.ForegroundServiceStartNotAllowedException;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.IBinder;
 
 import androidx.annotation.Nullable;
@@ -40,16 +42,8 @@ import java.util.ArrayList;
 /**
  * Used to get GPS location when SMS request comes in
  */
-
-
-/** TODO
- * ACQUIRE_CAUSES_WAKEUP
- * WakefulBrRec is depreciated
- * Some changes about where can services be started in the next release
- */
 public class LocationRetrieverFgService extends Service implements LocationRetriever.LocCb
 {
-    private static final String CLASS_TAG = LocationRetrieverFgService.class.getSimpleName();
 
     private int mWakeLockId;
 
@@ -63,7 +57,7 @@ public class LocationRetrieverFgService extends Service implements LocationRetri
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
-        final int retval = super.onStartCommand(intent, flags, startId);
+        super.onStartCommand(intent, flags, startId);
 
         final PeopleDataFile PEOPLEDATA = PeopleDataFile.getInstance(getApplicationContext());
 
@@ -72,7 +66,7 @@ public class LocationRetrieverFgService extends Service implements LocationRetri
 
         mTitle = String.format("Request from %s",
             PEOPLEDATA.containsId(mAddr) ?
-                PEOPLEDATA.getDataEntry(mAddr).displayName : Utils.unlistedDisplayName(mAddr));
+                PEOPLEDATA.getDataEntry(mAddr).getDisplayName() : Utils.unlistedDisplayName(mAddr));
         mDetails = new ArrayList<>();
         mCallStatus = "OK";
 
@@ -87,16 +81,25 @@ public class LocationRetrieverFgService extends Service implements LocationRetri
                     mTitle, "Waiting for GPS fix", String.format("Timeout is: %s min", SmsLoc_Settings.GPS_TIMEOUT.getInt(this))),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
         }
-        catch (IllegalStateException e) {
-            LogFile.getInstance(getApplication()).addLogEntry(e.getMessage());
-            onLocationRcvd(null, e.getMessage());
+        catch (Exception e) {
+            if (Build.VERSION.SDK_INT >= 31 && e instanceof ForegroundServiceStartNotAllowedException) {
+                LogFile.getInstance(this).addLogEntry("Could not start GPS fix due to app's background restrictions");
+            }
+            else {
+                // These are actual bugs in the code - manifest mismatch
+                // InvalidForegroundServiceType, MissingForegroundServiceTypeException and SecurityException in 34
+                LogFile.getInstance(this).addLogEntry("BUG: Please report this\n" + e.getMessage());
+            }
+
+            stopSelf(startId);
+            return START_NOT_STICKY;
         }
 
         LocationRetriever.getLocation(
-            SmsLoc_Settings.GPS_TIMEOUT.getInt(this) * Utils.MIN_2_MS, this, this
+                (long) SmsLoc_Settings.GPS_TIMEOUT.getInt(this) * Utils.MIN_2_MS, this, this
         );
 
-        return retval;
+        return START_NOT_STICKY;
     }
 
 
@@ -117,7 +120,7 @@ public class LocationRetrieverFgService extends Service implements LocationRetri
         }
 
         GpsData gpsData =
-            GpsData.fromLocationAndBat(loc, Utils.getBatteryPrcnt(this));
+            GpsData.fromLocationAndBat(loc, Utils.getBatteryPct(this));
 
         if (!gpsData.dataValid()) {
             mCallStatus = "INVALID";
@@ -130,17 +133,14 @@ public class LocationRetrieverFgService extends Service implements LocationRetri
             mDetails.add("Missing SEND_SMS permission");
         }
 
-        this.stopForeground(true);
-
         // This automatically logs
         NotificationHandler.getInstance(this).createAndPostNotification(
             mTitle, "Response " + mCallStatus, mDetails.isEmpty() ? null : mDetails.toString());
 
+        stopForeground(STOP_FOREGROUND_REMOVE);
         this.stopSelf();
         //SmsReceiver.completeWakefulIntent(mIntent);
         SmsReceiver.releaseWakeLock(mWakeLockId);
-
-        return;
     }
 
     @Nullable

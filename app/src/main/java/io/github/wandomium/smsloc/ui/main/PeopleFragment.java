@@ -1,29 +1,35 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
 package io.github.wandomium.smsloc.ui.main;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
+import android.content.res.TypedArray;
+import android.database.Cursor;
 import android.graphics.BlendMode;
 import android.graphics.BlendModeColorFilter;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,30 +39,41 @@ import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.google.i18n.phonenumbers.NumberParseException;
+
+import io.github.wandomium.smsloc.MainActivity;
 import io.github.wandomium.smsloc.R;
 import io.github.wandomium.smsloc.LocationRetriever;
+import io.github.wandomium.smsloc.SmsUtils;
+import io.github.wandomium.smsloc.data.file.LogFile;
 import io.github.wandomium.smsloc.defs.SmsLoc_Common;
 import io.github.wandomium.smsloc.data.file.SmsDayDataFile;
 import io.github.wandomium.smsloc.data.file.PeopleDataFile;
 import io.github.wandomium.smsloc.data.unit.SmsLocData;
 import io.github.wandomium.smsloc.data.unit.PersonData;
-import io.github.wandomium.smsloc.toolbox.ABaseBrdcstRcvr;
+import io.github.wandomium.smsloc.toolbox.ABaseBrdcstRcv;
 import io.github.wandomium.smsloc.ui.dialogs.PersonActionDialogFragment;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.Utils;
 
-import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Random;
+import java.util.Set;
 
 
 //TODO handle a situation where we received response from a list_item_person not on the list
@@ -64,65 +81,82 @@ import java.util.List;
 public class PeopleFragment extends ABaseFragment implements LocationRetriever.LocCb
 {
     private ListView mListView;
+    private ActivityResultLauncher<Intent> mContactPickerLauncher;
 
     private final long LOC_DELAY_MS = 100;
     private boolean mSecondLocCall = false;
 
-    public PeopleFragment()
-    {
-        super(R.layout.fragment_people);
+    public PeopleFragment() { super(R.layout.fragment_people); }
+    public static PeopleFragment newInstance(final int position) {
+        final PeopleFragment newInstance = new PeopleFragment();
+        _initInstance(newInstance, position);
+        return newInstance;
     }
 
-    // Helper for typecast
-    private PeopleListAdapter _listAdapter()
-    {
-        return (PeopleListAdapter)mListView.getAdapter();
-    }
+    // We access the adapter only trough the list view
+    private PeopleListAdapter _listAdapter() { return (PeopleListAdapter) mListView.getAdapter(); }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState)
     {
         super.onViewCreated(view, savedInstanceState);
 
-        WeakReference<PeopleFragment> THISW = new WeakReference<>(this);
-
-        /** Generate a list of all people */
-        ArrayList<PersonData> people = new ArrayList<>();
+        /* People List */
+        HashSet<String> people = new HashSet<>();
         for (PersonData p : PeopleDataFile.getInstance(getContext()).getDataAll().values()) {
             if (p.getId().compareTo(SmsLoc_Common.Consts.UNAUTHORIZED_ID) != 0) {
-                people.add(p);
+                people.add(p.getAddr());
             }
         }
-
-        /** People list */
         mListView = view.findViewById(R.id.people_list);
         mListView.setAdapter(
-                new PeopleListAdapter(getContext(), android.R.layout.simple_list_item_1, people));
+                new PeopleListAdapter(requireContext(), android.R.layout.simple_list_item_1, people));
         mListView.setOnItemClickListener(
-                (AdapterView<?> arg0, View arg1, int position, long arg3) ->
+                (AdapterView<?> parent, View view2, int position, long id) ->
                 {
+                    final String addr = (String) parent.getItemAtPosition(position);
                     final PersonActionDialogFragment df =
-                        new PersonActionDialogFragment(THISW.get()._listAdapter().getItem(position).addr, THISW.get()._listAdapter().mMyLocation);
+                        new PersonActionDialogFragment(addr, PeopleFragment.this._listAdapter().mMyLocation);
                     df.show(getParentFragmentManager(), df.getCustomTag());
                 });
 
-        /** Refresh my location */
+        /* Refresh my location */
         ((SwipeRefreshLayout) view.findViewById(R.id.refresh_people_list))
                 .setOnRefreshListener(() -> {
-                    LocationRetriever.getLocation(LOC_DELAY_MS, THISW.get(), getActivity());
+                    LocationRetriever.getLocation(LOC_DELAY_MS, PeopleFragment.this, requireContext()); //getActivity() may return null here
                 });
 
-        /** Whitelist CB */
+        /* Whitelist CB */
         CheckBox whitelistCb = view.findViewById(R.id.ignoreWhitelist);
-//        whitelistCb.setOnClickListener((View v) -> {
-//            LocationRetrieverInstance.getLocationSynchronous();
-//            mListAdapter.notifyDataSetChanged();
-//        });
-        whitelistCb.setChecked(SmsLoc_Settings.IGNORE_WHITELIST.getBool(getContext()));
+        whitelistCb.setChecked(SmsLoc_Settings.IGNORE_WHITELIST.getBool(requireContext()));
         whitelistCb.setOnClickListener((View v) -> {
             final boolean ignoreWhitelist = ((CheckBox) v).isChecked();
             SmsLoc_Settings.IGNORE_WHITELIST.set(v.getContext(),ignoreWhitelist);
         });
+
+        /* Add person functionality */
+        mContactPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), result -> {
+                    if (result.getResultCode() == FragmentActivity.RESULT_OK)
+                        //This action is rare so we don't care about a potential performance hit with catching the exception
+                        //noinspection DataFlowIssue - Just catching and ignorig null here is fine
+                        try (final Cursor cursor = requireContext().getContentResolver().query(result.getData().getData(),
+                                null, null, null, null)) {
+                            //noinspection DataFlowIssue - Same as above
+                            cursor.moveToFirst();
+
+                            PeopleFragment.this._addPerson(
+                                    cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER)),
+                                    cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)));
+                        }
+                        catch (NumberParseException | IllegalArgumentException | NullPointerException e) {
+                            LogFile.getInstance(getContext()).addLogEntry(e.getMessage());
+                            Toast.makeText(getContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                });
+        view.findViewById(R.id.add_person).setOnClickListener((v) -> mContactPickerLauncher.launch(
+                new Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+        ));
     }
 
     @Override
@@ -141,73 +175,56 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
     public void onResume()
     {
         super.onResume();
-        LocationRetriever.getLocation(LOC_DELAY_MS, this, getActivity());
+        // Disable when asking for permissions. To many calls - on every dialog close, etc.
+        if (!((MainActivity) requireActivity()).permissionCheckActive()) {
+            LocationRetriever.getLocation(LOC_DELAY_MS, this, requireActivity());
+        }
     }
 
     @Override
     protected void _createBroadcastReceivers()
     {
-        /** Person add/remove */
-        mReceiverList.add(new ABaseBrdcstRcvr<PeopleFragment>(PeopleFragment.this,
-                new String[]{SmsLoc_Intents.ACTION_NEW_PERSON, SmsLoc_Intents.ACTION_PERSON_REMOVED}) {
-            @Override
-            public void onReceive(Context context, Intent intent)
-            {
-                final String addr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);
-                switch (intent.getAction())
-                {
-                    case SmsLoc_Intents.ACTION_NEW_PERSON:
-                        mParent.get().addPerson(addr);
-                        break;
-                    case SmsLoc_Intents.ACTION_PERSON_REMOVED:
-                        mParent.get().removePerson(addr);
-                        break;
-                    default:
-                        return;
-                }
-                mParent.get()._listAdapter().notifyDataSetChanged();
-            }
-        });
-
-        /** Dataset update */
-        mReceiverList.add(new ABaseBrdcstRcvr<PeopleFragment>(PeopleFragment.this,
+        mReceiverList.add(new ABaseBrdcstRcv<>(PeopleFragment.this,
                 new String[]{SmsLoc_Intents.ACTION_REQUEST_SENT, SmsLoc_Intents.ACTION_RESPONSE_RCVD,
-                        SmsLoc_Intents.ACTION_NEW_LOCATION, SmsLoc_Intents.ACTION_DAY_DATA_CLR}) {
+                        SmsLoc_Intents.ACTION_NEW_LOCATION, SmsLoc_Intents.ACTION_DAY_DATA_CLR,
+                        SmsLoc_Intents.ACTION_PERSON_REMOVED}) {
             @Override
-            public void onReceive(Context context, Intent intent)
-            {
-                mParent.get()._listAdapter().notifyDataSetChanged(); //we don't hold a copy but simply load every time
+            public void onReceive(Context context, Intent intent) {
+                final String action = intent.getAction();
+                if (action != null) {
+                    if (_listAdapter().mMyLocation == null) {
+                        LocationRetriever.getLocation(LOC_DELAY_MS,
+                                PeopleFragment.this, PeopleFragment.this.requireActivity());
+                    }
+                    if (action.equals(SmsLoc_Intents.ACTION_PERSON_REMOVED)) {
+                        final String addr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);
+                        if (addr != null) {
+                            mParent.get()._listAdapter().remove(addr);
+                        }
+                    }
+                    else {
+                        mParent.get()._listAdapter().notifyDataSetChanged();
+                    }
+                }
             }
         });
-
-        return;
-    }
-
-    private void addPerson(String addr)
-    {
-        _listAdapter().add(PeopleDataFile.getInstance(getContext()).getDataEntry(addr));
-    }
-    private void removePerson(String addr)
-    {
-        int numPeople = _listAdapter().getCount();
-        for(int i = 0; i < numPeople; i++) {
-            PersonData p = _listAdapter().getItem(i);
-            if (p.addr.compareTo(addr) == 0) {
-                _listAdapter().remove(p);
-                break;
-            }
-        }
     }
 
     @Override
     public void onLocationRcvd(Location loc, String msg)
     {
         final FragmentActivity activity = PeopleFragment.this.getActivity();
-
+        if (activity == null) {
+            return;
+        }
         if (loc == null && !mSecondLocCall) {
             mSecondLocCall = true;
-            // OK to use, we are running app in the foreground
-            LocationRetriever.getLocationWithNetwork(LOC_DELAY_MS, this, getActivity());
+            //TODO:
+            // This is a problem for API29 because the getLocationUpdates takes main looper by default
+            if (Build.VERSION.SDK_INT > 29) {
+                // OK to use, we are running app in the foreground
+                LocationRetriever.getLocationWithNetwork(LOC_DELAY_MS, this, activity);
+            }
 
             return;
         }
@@ -215,50 +232,124 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
         mSecondLocCall = false;
         activity.runOnUiThread(() -> {
             try {
-                ((SwipeRefreshLayout) PeopleFragment.this.getView()
+                ((SwipeRefreshLayout) PeopleFragment.this.mViewBinding
                         .findViewById(R.id.refresh_people_list)).setRefreshing(false);
                 _listAdapter().mMyLocation = loc;
                 _listAdapter().notifyDataSetChanged();
-            } catch (NullPointerException e) {}
+            } catch (NullPointerException ignored) {}
         });
     }
 
-    private static class PeopleListAdapter extends ArrayAdapter<PersonData>
+    private void _addPerson(@NonNull final String addrIn, @NonNull String name) throws NumberParseException, IllegalArgumentException
     {
-        public Location mMyLocation = null;
+        final String addr = SmsUtils.convertToE164PhoneNumFormat(addrIn);
 
-        public PeopleListAdapter(@NonNull Context context, int resource, @NonNull List<PersonData> objects) {
-//            super(context.getApplicationContext(), resource, objects);
-                super(context, resource, objects);
+        final PeopleDataFile PEOPLEDATA = PeopleDataFile.getInstance(requireContext());
+        if (PEOPLEDATA.containsId(addr)) {
+            throw new IllegalArgumentException("Contact exists");
         }
 
+        int color = Color.GRAY;
+        try (final TypedArray colors = getResources().obtainTypedArray(R.array.letter_tile_colors)) {
+            color = colors.getColor((new Random()).nextInt(colors.length()), Color.DKGRAY);
+        }
+        catch (Resources.NotFoundException ignored) {}
+
+        synchronized (PEOPLEDATA.getLockObject()) {
+            PersonData personData = PEOPLEDATA.referenceOrCreateObject_unlocked(addr);
+            personData.setDisplayName(name);
+            personData.setColor(color);
+        }
+        PEOPLEDATA.writeFileAsync();
+
+        _listAdapter().add(addr);
+        LogFile.getInstance(requireContext()).addLogEntry("Added contact: " + name);
+        requireContext().sendBroadcast(SmsLoc_Intents.generateIntent(requireContext(), addr, SmsLoc_Intents.ACTION_NEW_PERSON));
+    }
+
+
+    private static class PeopleListAdapter extends ArrayAdapter<String>
+    {
+        public Location mMyLocation = null;
+        private final HashSet<String> mUniqueList;
+        private final LayoutInflater  mLayoutInflater;
+
+        private static class ViewHolder {
+            TextView  mPersonIcon;
+            TextView  mText;
+            ImageView mStatusIcon;
+        }
+
+        // Set forces the elements to be unique
+        public PeopleListAdapter(@NonNull Context context, int resource, @NonNull Set<String> objects) {
+                super(context, resource, new ArrayList<>(objects));
+                this.mUniqueList = new HashSet<>(objects);
+                this.mLayoutInflater = LayoutInflater.from(context);
+                this.setNotifyOnChange(true); // we always want to update list when change happens
+        }
+
+        // Prevent duplicates
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            //TextView textView = (TextView) super.getView(position, convertView, parent);
+        public void add(String addr) {
+            if (mUniqueList.add(addr)) { super.add(addr); }
+        }
+        @Override
+        public void remove(String addr) {
+            if (mUniqueList.remove(addr)) { super.remove(addr); }
+        }
 
-            View rowView = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.list_item_person, null);
+        @SuppressLint("DefaultLocale")
+        @NonNull
+        @Override
+        public View getView(int position, View convertView, @NonNull ViewGroup parent)
+        {
+            final PersonData person  = PeopleDataFile.getInstance(getContext()).getDataEntry(getItem(position));
+            final SmsLocData locData = SmsDayDataFile.getInstance(getContext()).getDataEntry(person.getAddr());
 
-            final PersonData person = getItem(position);
-            final SmsLocData locData = SmsDayDataFile.getInstance(getContext()).getDataEntry(person.addr);
+            if (convertView == null) {
+                // initialize the view
+                convertView = mLayoutInflater.inflate(R.layout.list_item_person, parent, false);
+
+                ViewHolder holder = new ViewHolder();
+                holder.mPersonIcon = convertView.findViewById(R.id.person_icon);
+                holder.mText       = convertView.findViewById(R.id.text);
+                holder.mStatusIcon = convertView.findViewById(R.id.status_icon);
+
+                convertView.setTag(holder);
+
+                /* Initials icon */
+                //initials with color circle used on map - we don't support custom color so this remains fixed
+                final Drawable personIcon = ResourcesCompat.getDrawable(parent.getResources(), R.drawable.ic_circle_24, null);
+                if (personIcon != null) {
+                    personIcon.setColorFilter(new BlendModeColorFilter(person.getColor(), BlendMode.SRC_ATOP));
+                    holder.mPersonIcon.setBackground(personIcon);
+                }
+                else {
+                    LogFile.getInstance(getContext()).addLogEntry("BUG: Could not load person icon");
+                }
+                holder.mPersonIcon.setText(person.getInitials());
+            }
 
             int color = Color.GRAY;
             String text = "No location data";
 
             if (locData != null)
             {
-                if (locData.locationUpToDate_ver2())    { color = Color.rgb(39,204,44); }
+                if (locData.locationUpToDate())    { color = Color.rgb(39,204,44); }
                 else if (locData.requestPending())      { color = Color.rgb(255,174,66); }
                 else if (!locData.lastResponseValid())  { color = Color.RED; }
 
                 if (locData.getLastValidLocation() != null) {
-                    Long utc = locData.getLastValidLocation().utc;
+                    final long utc = locData.getLastValidLocation().utc;
 
                     text = String.format("Last valid location: %s\n\tElapsed: %s\n",
-                            new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(utc)),
+                            new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.GERMAN).format(new Date(utc)),
                             Utils.timeToNowStr(locData.getLastValidLocation().utc));
 
-                    Float distance = locData.getLastValidLocation().distanceFrom(mMyLocation);
+                    Float distance = null;
+                    if (mMyLocation != null) {
+                        distance = locData.getLastValidLocation().distanceFrom(mMyLocation);
+                    }
                     text +=
                         (distance == null) ?
                             String.format("\tDistance: %s", "Get My Loc Failed") //locRetriever.getInvalidLocReasonSimple())
@@ -266,22 +357,20 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                 }
             }
 
-            //initials with color circle used on map
-            Drawable personIcon = parent.getResources().getDrawable(R.drawable.ic_circle_24, null);
-            personIcon.setColorFilter(new BlendModeColorFilter(person.color, BlendMode.SRC_ATOP));
-            ((TextView)rowView.findViewById(R.id.person_icon)).setBackground(personIcon);
-            ((TextView)rowView.findViewById(R.id.person_icon)).setText(person.initials);
+            /* gps status icon */
+            final Drawable statusIcon = ResourcesCompat.getDrawable(parent.getResources(), R.drawable.ic_location_marker_24, null);
+            if (statusIcon != null) {
+                statusIcon.setColorFilter(new BlendModeColorFilter(color, BlendMode.SRC_ATOP));
+                ((ViewHolder) convertView.getTag()).mStatusIcon.setImageDrawable(statusIcon);
+            }
+            else {
+                LogFile.getInstance(getContext()).addLogEntry("BUG: Could not load status icon");
+            }
 
-            //gps status icon
-            Drawable statusIcon = parent.getResources().getDrawable(R.drawable.ic_location_marker_24, null);
-            statusIcon.setColorFilter(new BlendModeColorFilter(color, BlendMode.SRC_ATOP));
-            ((ImageView)rowView.findViewById(R.id.status_icon)).setImageDrawable(statusIcon);
+            /* detail text */
+            ((ViewHolder)convertView.getTag()).mText.setText(String.format("%s\n%s", person.getDisplayName(), text));
 
-            //detail text
-            ((TextView)rowView.findViewById(R.id.text)).setText(
-                    String.format("%s\n%s", person.displayName, text));
-
-            return rowView;
+            return convertView;
         }
     }
 }

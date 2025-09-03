@@ -17,6 +17,7 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
 -->
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="io.github.wandomium.smsloc"
     android:installLocation="internalOnly">
     <!--
@@ -26,23 +27,33 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 <!-- seems play store is not happy about this. proper way is to ask to open settings
-     we have another approach to this now
+     UPDATE: Cannot be done on Android 15 Pixel phones. This menu is completely hidden and we
+     cannot navigate the user to any settings (app or system) where this could be changed.
+     The only possible way to ask for this permission is to fire this intent explicitly
     <uses-permission android:name="android.permission.IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 -->
 
     <uses-feature
         android:name="android.hardware.location.gps"
-        android:required="true" />
+        android:required="true"
+        tools:ignore="UnnecessaryRequiredFeature" />
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="true"
+        tools:ignore="UnnecessaryRequiredFeature" />
+
 
     <application
         android:allowBackup="true"
@@ -50,15 +61,11 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
         android:label="@string/app_name"
         android:roundIcon="@mipmap/smsloc_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/LaunchTheme">
+        android:theme="@style/AppTheme">
 
         <activity
             android:name="io.github.wandomium.smsloc.MainActivity"
-            android:label="@string/app_name"
             android:exported="true">
-            <!--
-                        android:theme="@style/AppTheme.NoActionBar">
-            -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -67,7 +74,8 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
         <receiver
             android:name="io.github.wandomium.smsloc.SmsReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
             <intent-filter>
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
@@ -82,7 +90,7 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
             </intent-filter>
         </receiver>
         <receiver
-            android:name="io.github.wandomium.smsloc.toolbox.NotificationHandler$NotGroupClearedRcvr"
+            android:name="io.github.wandomium.smsloc.toolbox.NotificationHandler$NotGroupClearedRcv"
             android:exported="false">
             <intent-filter>
                 <action android:name="notification_cancelled"/>

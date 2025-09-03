@@ -1,16 +1,16 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
@@ -19,21 +19,36 @@ package io.github.wandomium.smsloc;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.CancellationSignal;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import java.util.Timer;
 import java.util.TimerTask; //TODO: TimerTask will never become a demon. keeps alive
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-@SuppressLint("MissingPermission")
-public class LocationRetriever implements Consumer<Location>
-{
-    protected Timer mToutTimer;
-    protected CancellationSignal mCancelSignal;
+import io.github.wandomium.smsloc.data.file.LogFile;
 
-    protected LocCb mLocCb;
+@SuppressLint("MissingPermission")
+public class LocationRetriever implements Consumer<Location>, LocationListener
+{
+    private Timer mToutTimer;
+    private LocCb mLocCb;
+
+    private CancellationSignal mCancelSignal;
+    private Context mCtx; //we need this stored for API29 to unregister calls
+
+    private boolean mCallFinished = false;
+
+    private LocationRetriever(LocCb cb, Context ctx) {
+        mLocCb = cb;
+        mCtx = ctx;
+    }
 
     @FunctionalInterface
     public interface LocCb {
@@ -42,69 +57,97 @@ public class LocationRetriever implements Consumer<Location>
 
     /** Executes one call to getLocations and then terminates
      */
-    public static void getLocation(long delay_ms, LocCb cb, Context ctx) {
-        new LocationRetriever(cb)._getLocation(delay_ms, LocationManager.GPS_PROVIDER, ctx);
+    public static void getLocation(long delay_ms, @NonNull LocCb cb, @NonNull Context ctx) {
+        new LocationRetriever(cb, ctx)._getLocation(delay_ms, LocationManager.GPS_PROVIDER);
     }
 
     /**
      * This one should only be used when the user is running the app (same
      * wat the map gets location indoors).
-     *
+     * <p>
      * It is dicey to use it with requestLocation because it will also work
      * indoor and this is an outdoor app
      */
     @Deprecated
-    public static void getLocationWithNetwork(long delay_ms, LocCb cb, Context ctx)
-    {
-        new LocationRetriever(cb)._getLocation(delay_ms, LocationManager.NETWORK_PROVIDER, ctx);
+    public static void getLocationWithNetwork(long delay_ms, @NonNull LocCb cb, @NonNull Context ctx) {
+        new LocationRetriever(cb, ctx)._getLocation(delay_ms, LocationManager.NETWORK_PROVIDER);
     }
 
-    private LocationRetriever(LocCb cb) {
-        mLocCb = cb;
+    /** Consumer<Location> method (for API >= 30)
+     * Can have null if call failed
+     */
+    @Override
+    public final void accept(Location location) {
+        _finishCall(location, location == null ? "GPS fix OK" : "GPS fix FAIL");
+    }
+    /** LocationListener method (API 29 version of accept method)
+     * only called on success
+     */
+    @Override
+    public void onLocationChanged(@NonNull Location location) {
+        _finishCall(location, "GPS fix OK");
     }
 
-    private void _getLocation(final long delay_ms, String provider, Context ctx)
+    private void _getLocation(final long delay_ms, String provider)
     {
         mToutTimer    = new Timer();
-        mCancelSignal = new CancellationSignal();
 
-        LocationManager locMngr = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+        LocationManager locMngr = (LocationManager) mCtx.getSystemService(Context.LOCATION_SERVICE);
 
-        // TODO:
+        // TODO: (This only works with play services enabled no-go for F-droid)
         // When we will target <=31 we can remove the timertask and simply set the timeout
         // trough LocationRequest
         // LocationRequest.Builder locRequest = new LocationRequest.Builder(0).setDurationMillis(delay_ms).set;
 
         try {
-            // This method may return locations from the very recent past (on the order of several seconds),
-            // but will never return older locations (for example, several minutes old or older).
-            // Checked: consumer is nulled so we are safe here
-            locMngr.getCurrentLocation(
-                provider, mCancelSignal, Executors.newSingleThreadExecutor(), this);
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+                // this one waits for MAX_SINGLE_LOCATION_TIMEOUT_MS = 30 * 1000. We want control over wait time
+                // locMngr.requestSingleUpdate(provider, this, null);
+                locMngr.requestLocationUpdates(provider, 1000, 500, this);
+            }
+            else {
+                mCancelSignal = new CancellationSignal();
+                // This method may return locations from the very recent past (on the order of several seconds),
+                // but will never return older locations (for example, several minutes old or older).
+                // Checked: consumer is null-ed so we are safe here
+                locMngr.getCurrentLocation(
+                        provider, mCancelSignal, Executors.newSingleThreadExecutor(), this);
+            }
             mToutTimer.schedule(new ToutTimerTask(), delay_ms);
         }
-        catch (IllegalStateException e) {} //task canceled/completed, itd.
+        catch (IllegalStateException e) { //task canceled/completed, itd.
+            _finishCall(null, e.getMessage());
+        }
         catch (SecurityException e) {
-            accept(null, e.getMessage());
+            LogFile.getInstance(mCtx).addLogEntry("ERROR: Could not get GPS fix: Missing permissions");
+            _finishCall(null, e.getMessage());
         }
     }
 
-    // Location Consumer method
-    @Override
-    public final void accept(Location location) {
-        accept(location, "");
-    }
     // Update with new location and clear all references
-    protected void accept(Location location, String msg)
+    private void _finishCall(Location location, String msg)
     {
-        // prevent overriding, possible memory leak if not called
-        // this also clears task queue so the ToutTimerTask we have should
-        // also be eligible for garbage collections
-        // will always clear the list
+        // For API29: Handles a race condition when timer expires but we get a
+        // location update before we manage to call removeUpdates
+        if (mCallFinished) {
+            Log.d("LocationRetriever", "double call of _callFinished");
+            return;
+        }
+        mCallFinished = true;
+
         mToutTimer.cancel();
-        mCancelSignal = null;
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            ((LocationManager) mCtx.getSystemService(Context.LOCATION_SERVICE)).removeUpdates(this);
+        }
+        else {
+            mCancelSignal.cancel();
+        }
 
         mLocCb.onLocationRcvd(location, msg);
+
+        // null all references to avoid dangling
+        mCancelSignal = null;
+        mCtx   = null;
         mLocCb = null;
     }
 
@@ -114,8 +157,7 @@ public class LocationRetriever implements Consumer<Location>
     {
         @Override
         public void run() {
-            mCancelSignal.cancel();
-            accept(null, "GPS fix timeout");
+            _finishCall(null, "GPS fix timeout");
         }
     }
 }

@@ -1,16 +1,16 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
@@ -23,7 +23,6 @@ import io.github.wandomium.smsloc.data.base.DataUnitFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonSyntaxException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,17 +33,13 @@ public final class SmsLocData implements Cloneable, DataUnit<SmsLocData>
 {
     private final String addr;
 
-    private Long lastReqTime, lastRespTime = Long.MIN_VALUE;
-
-    private Boolean lastRespValid = false;
-
-    private Integer numSentReq, numResponses, numReceivedReq = 0;
-
+    private long lastReqTime, lastRespTime = 0;
+    private boolean lastRespValid = false;
+    private int numSentReq, numResponses, numReceivedReq = 0;
     private GpsData[] gpsDataPoints = new GpsData[0]; //private, keep sorted chronologically
 
     public SmsLocData(String addr) {
         this.addr = addr;
-        initData();
     }
 
     public static SmsLocData fromJson(String json) {
@@ -53,24 +48,14 @@ public final class SmsLocData implements Cloneable, DataUnit<SmsLocData>
             if (retval.getId() == null) {
                 return null;
             }
-            retval.initData();
+            // Others are primitives and initialized to 0/false if missing which is ok
+            if (retval.gpsDataPoints == null) { retval.gpsDataPoints = new GpsData[0]; }
             return retval;
         }
-        catch (JsonSyntaxException e) { return null; }
         catch (JsonParseException e)  { return null; }
     }
     public String toJson() {
         return (new Gson()).toJson(this);
-    }
-
-    private void initData() {
-        if (lastReqTime == null)    { lastReqTime = Long.MIN_VALUE; }
-        if (lastRespTime == null)   { lastRespTime = Long.MIN_VALUE; }
-        if (lastRespValid == null)  { lastRespValid = false; }
-        if (numSentReq == null)     { numSentReq = 0; }
-        if (numResponses == null)   { numResponses = 0; }
-        if (numReceivedReq == null) { numReceivedReq = 0; }
-        if (gpsDataPoints == null)  { gpsDataPoints = new GpsData[0]; }
     }
 
     public long lastReqTime()           { return lastReqTime; }
@@ -93,7 +78,6 @@ public final class SmsLocData implements Cloneable, DataUnit<SmsLocData>
             _addLocation(location);
             lastRespValid = true;
         }
-        return;
     }
 
     /* TODO find a better name, there might be requests pending even if the
@@ -105,20 +89,9 @@ public final class SmsLocData implements Cloneable, DataUnit<SmsLocData>
         return lastRespTime < lastReqTime;
     }
 
-    //we'll probably have to rely on smth else, since we have mismatch
-    //between system time and gps time! See top of this file
     public boolean locationUpToDate() {
-        if (gpsDataPoints.length == 0) {
-            return false;
-        }
-        return
-            gpsDataPoints[gpsDataPoints.length - 1].utc
-                    > lastReqTime;
-    }
-
-    public boolean locationUpToDate_ver2() {
         /* TODO check again if this is true
-            - one thing that commes to mind is an old gps fix, maybe add a tolerance window
+            - one thing that comes to mind is an old gps fix, maybe add a tolerance window
            if last location is valid and last response ts is > request ts
            than this should be valid.
            Also, in this case we rely on timestamps from the same system
@@ -171,14 +144,16 @@ public final class SmsLocData implements Cloneable, DataUnit<SmsLocData>
         return addr;
     }
 
+    @NonNull
     @Override
     public SmsLocData getUnitCopy()
     {
-        SmsLocData copy = null;
+        SmsLocData copy;
         try {
             copy = (SmsLocData) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError(); // we should never get here
         }
-        catch (CloneNotSupportedException e) { return null; }
 
         //array of immutable objects
         copy.gpsDataPoints = gpsDataPoints.clone();

@@ -18,7 +18,7 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
 <menu xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/per_warning"
-        android:title="permission"
+        android:title="@string/permission"
         android:icon="@drawable/ic_warning_24"
         app:showAsAction="always">
         <!-- "file" submenu -->
@@ -31,12 +31,14 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
         </menu>
 -->
     </item>
-    <item android:id="@+id/about"
-        android:title="About"/>
     <item android:id="@+id/gpsFixTimeout"
-        android:title="GPS Fix Timeout"/>
+        android:title="@string/gps_fix_timeout"/>
     <item android:id="@+id/troubleshooting"
-        android:title="Troubleshooting"/>
+        android:title="@string/troubleshooting"/>
+    <item android:id="@+id/selectSim"
+        android:title="@string/select_sim_card" />
+    <item android:id="@+id/about"
+        android:title="@string/bug_report"/>
 <!--    <item-->
 <!--        android:id="@+id/menu_refresh"-->
 <!--        android:showAsAction="never"-->

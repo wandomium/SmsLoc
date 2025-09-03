@@ -1,83 +1,67 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
 package io.github.wandomium.smsloc.ui.main;
 
-import android.os.Bundle;
+import android.util.Log;
 
-import androidx.annotation.Nullable;
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentPagerAdapter;
+import androidx.fragment.app.FragmentActivity;
+import androidx.viewpager2.adapter.FragmentStateAdapter;
 
-/**
- * A [FragmentPagerAdapter] that returns a fragment corresponding to
- * one of the sections/tabs/pages.
- */
-public class TabPagerAdapter extends FragmentPagerAdapter
+public class TabPagerAdapter extends FragmentStateAdapter
 {
-    public static final int PEOPLE_TAB_ID = 0;
-    public static final int MAP_TAB_ID = 1;
-    public static final int LOG_TAB_ID = 2;
-//    public static final int DEBUG_TAB_ID = 3;
-    public static final int NUM_TABS = 3;
-    public static final String[] TAB_TITLES = new String[]{"List", "Map", "Tx/Rx Log", "Debug"};
+    private final String TAG = getClass().getSimpleName();
 
-    //TODO-Minor
-    //Recheck this behaviour and if this is something we need or can we keep default (but default
-    //is depreciated
-    public TabPagerAdapter(FragmentManager fragmentManager)
-    {
-        super(fragmentManager, FragmentPagerAdapter.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
+    public enum Tabs {
+        People("LIST"), Map("MAP"), Log("Activity Log");
+        Tabs(final String title) { this.cTitle = title; }
+
+        public final String     cTitle;
+        //Because having this define in enum is not a compile time constant. MAKE SURE THIS IS ALWAYS UP TO DATE!!!!!
+        public static final int cCount = values().length;
+        public static Tabs fromInt(final int position) {
+            return position > Log.ordinal() ? null : (position < 0 ? null : values()[position]);
+        }
     }
 
-    @Nullable
-    @Override
-    public CharSequence getPageTitle(int position) {
-        return TAB_TITLES[position];
+    public TabPagerAdapter(FragmentActivity fragmentActivity) {
+        super(fragmentActivity);
     }
 
     @Override
-    public int getCount() { return NUM_TABS; }
+    public int getItemCount() { return Tabs.cCount;}
 
     //This is only called if instantiateItem method does not have an instance of this fragment
     //when the fragment needs to be displayed
+    @NonNull
     @Override
-    public Fragment getItem(int position)
+    public Fragment createFragment(int position)
     {
-        Fragment fragment;
-
-        switch (position)
-        {
-            case PEOPLE_TAB_ID:
-                fragment = new PeopleFragment(); break;
-            case MAP_TAB_ID:
-                fragment = new OsmdroidMapFragment(); break;
-            case LOG_TAB_ID:
-                fragment = new LogFragment(); break;
-//            case DEBUG_TAB_ID:
-//                fragment = new MapboxMapFragment(); break;
-            default:
-                return null;
+        final Tabs tab = Tabs.fromInt(position);
+        if (tab == null) {
+            Log.wtf(TAG, "Invalid fragment id: " + position);
+            throw new IllegalArgumentException("Invalid fragment id: " + position);
         }
 
-        Bundle bundle = new Bundle();
-        bundle.putInt(ABaseFragment.ARG_SECTION_NUMBER, position);
-        fragment.setArguments(bundle);
-
-        return fragment;
+        return switch (tab) {
+            case People -> PeopleFragment.newInstance(position);
+            case Map -> OsmdroidMapFragment.newInstance(position);
+            case Log -> LogFragment.newInstance(position);
+        };
     }
 }

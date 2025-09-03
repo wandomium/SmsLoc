@@ -1,58 +1,71 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
 package io.github.wandomium.smsloc;
 
+import android.app.ActivityManager;
 import android.content.Intent;
-import android.content.res.TypedArray;
-import android.database.Cursor;
-import android.graphics.Color;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 
+import io.github.wandomium.smsloc.data.file.LogFile;
 import io.github.wandomium.smsloc.data.file.SmsDayDataFile;
 import io.github.wandomium.smsloc.data.file.PeopleDataFile;
-import io.github.wandomium.smsloc.data.unit.PersonData;
-import com.google.android.material.tabs.TabLayout;
-import com.google.i18n.phonenumbers.NumberParseException;
 
+import com.google.android.material.tabs.TabLayoutMediator;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.viewpager.widget.ViewPager;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.viewpager2.widget.ViewPager2;
 
 import android.os.PowerManager;
-import android.provider.ContactsContract;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.Toast;
+
+import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import io.github.wandomium.smsloc.toolbox.NotificationHandler;
+import io.github.wandomium.smsloc.toolbox.Utils;
+import io.github.wandomium.smsloc.ui.dialogs.SimSelectorDialogFragment;
 import io.github.wandomium.smsloc.ui.dialogs.SimpleDialogs;
 import io.github.wandomium.smsloc.ui.main.TabPagerAdapter;
-import io.github.wandomium.smsloc.toolbox.PermissionChecker;
-import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
-
-import java.util.Random;
+import io.github.wandomium.smsloc.toolbox.PermissionMngr;
 
 
 //TODO E/TelemetryUtils: java.lang.SecurityException: getDataNetworkTypeForSubscriber
 
 public class MainActivity extends AppCompatActivity
 {
-    public PermissionChecker mPermissionChecker;
+    private static boolean mCreated = false;
+    private PermissionMngr mPermissionMngr;
+    private ActivityResultLauncher<Intent> mSettingsLauncher;
+
+    public MainActivity() {
+        super();
+        Utils.Debug.enableStrictMode();
+    }
+
+    public static boolean isCreated() {
+        return mCreated;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -60,50 +73,70 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         //TODO-Minor
         //Error receiver
+        mCreated = true;
 
-        /** VIEW SETUP **/
+        /* Pre-load all files so we don't get StrictMode violations */
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            LogFile.getInstance(this);
+            PeopleDataFile.getInstance(this);
+            SmsDayDataFile.getInstance(this);
+
+            executor.shutdown();
+        });
+
+        /* Setup view
+         * This inflates XMLs so we cannot really avoid it,
+         * nor can we move it out of the UI thread
+         * We tolerate it because it is in the main activity and it only happens once at startup
+         */
+        final String msg = MainActivity.class.getSimpleName() + ":setContentView(R.layout.activity_main)";
+        Utils.Debug.strictModeDiskIOOff(msg);
         setContentView(R.layout.activity_main);
+        Utils.Debug.strictModeDiskIOOn(msg);
 
-        ViewPager viewPager = findViewById(R.id.view_pager);
-        viewPager.setAdapter(new TabPagerAdapter(getSupportFragmentManager()));
+        ViewPager2 viewPager2 = findViewById(R.id.view_pager);
+        viewPager2.setAdapter(new TabPagerAdapter(MainActivity.this));
+        new TabLayoutMediator(findViewById(R.id.tabs), viewPager2,
+            (tab, position) -> tab.setText(Objects.requireNonNull(TabPagerAdapter.Tabs.fromInt(position), "BUG: Invalid Tab ID").cTitle)).attach();
+        //We don't want to constantly recreate the map page
+        //TODO: this needs to be a const but we have some issues defining it
+        viewPager2.setOffscreenPageLimit(3);
 
-        ((TabLayout) findViewById(R.id.tabs)).setupWithViewPager(viewPager);
         setSupportActionBar(findViewById(R.id.my_toolbar));
 
-/*
-        startActivity(
-                new Intent(
-                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        Uri.fromParts("package", getPackageName(), null)
-                )
-        );
-*/
-        mPermissionChecker = new PermissionChecker(MainActivity.this);
+        /* Permissions */
+        mPermissionMngr = new PermissionMngr(MainActivity.this);
+        mPermissionMngr.execute();
 
-        /** PERMISSION CHECK */
-        mPermissionChecker.execute();
-
-        //invalidateOptionsMenu();
-
-        return;
+        /* Settings updated */
+        mSettingsLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), result -> {
+                    MainActivity.this.mPermissionMngr.refreshPermissions();
+                    MainActivity.this.invalidateOptionsMenu();
+                });
     }
 
     public boolean batteryOptimizationOn() {
-        return !((PowerManager) getSystemService(POWER_SERVICE))
-                .isIgnoringBatteryOptimizations(getPackageName());
+        return !((PowerManager) getSystemService(POWER_SERVICE)).isIgnoringBatteryOptimizations(getPackageName());
+    }
+    public boolean isBackgroundRestricted() {
+        return ((ActivityManager) getSystemService(ACTIVITY_SERVICE)).isBackgroundRestricted();
+    }
+    public boolean permissionsMissing() {
+        return mPermissionMngr.areMissing();
+    }
+    public String getMissingPermissionStr() {
+        return mPermissionMngr.getMissingString();
     }
 
-    public boolean permissionsMissing() {
-        return !mPermissionChecker.mMissingList.isEmpty();
-    }
+    public boolean permissionCheckActive() { return mPermissionMngr.isBusy(); }
 
     @Override
     protected void onPause()
     {
+        Utils.closeAllFiles(this);
         super.onPause();
-        SmsDayDataFile.getInstance(this).writeFile();
-        PeopleDataFile.getInstance(this).writeFile();
-        return;
     }
 
     @Override
@@ -112,7 +145,6 @@ public class MainActivity extends AppCompatActivity
         super.onResume();
         NotificationHandler.getInstance(this).clearAllNotifications();
         invalidateOptionsMenu(); //permission or battery settings alert
-        return;
     }
 
 /*  LEAVE NOTE IN FOR FUTURE REFERENCE - Took some time to figure this one out
@@ -136,19 +168,25 @@ public class MainActivity extends AppCompatActivity
             int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
     {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        mPermissionChecker.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        return;
+
+        if (requestCode == SimSelectorDialogFragment.SIM_SELECT_REQUEST_ID) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                new SimSelectorDialogFragment().show(getSupportFragmentManager(), SimSelectorDialogFragment.TAG);
+            }
+        }
+        else {
+            mPermissionMngr.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu)
-    {
+    public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
 
         getMenuInflater().inflate(R.menu.menu, menu);
 
         final boolean invalidSettings =
-            batteryOptimizationOn() || permissionsMissing() ||
+            batteryOptimizationOn() || permissionsMissing() || isBackgroundRestricted() ||
             NotificationHandler.getInstance(MainActivity.this).areNotificationsBlocked();
 
         MenuItem alertItem = menu.findItem(R.id.per_warning);
@@ -161,91 +199,28 @@ public class MainActivity extends AppCompatActivity
     @Override
     public boolean onOptionsItemSelected(MenuItem item)
     {
-        switch (item.getItemId()) {
-            case R.id.per_warning:
-                SimpleDialogs.createAndShow(MainActivity.this, SimpleDialogs.Type.InvalidSettings);
-                break;
-            case R.id.gpsFixTimeout:
-                SimpleDialogs.createAndShow(MainActivity.this, SimpleDialogs.Type.GpsTimeout);
-                break;
-            case R.id.troubleshooting:
-                SimpleDialogs.createAndShow(MainActivity.this, SimpleDialogs.Type.Troubleshooting);
-                break;
-            default:
-                break;
+        final int id = item.getItemId();
+        if (id == R.id.about) {
+            SimpleDialogs.createAndShow(MainActivity.this, SimpleDialogs.Type.About);
+        }
+        else if (id == R.id.per_warning) {
+            SimpleDialogs.createAndShow(MainActivity.this, SimpleDialogs.Type.InvalidSettings);
+        }
+        else if (id == R.id.gpsFixTimeout) {
+            SimpleDialogs.createAndShow(MainActivity.this, SimpleDialogs.Type.GpsTimeout);
+        }
+        else if (id == R.id.troubleshooting) {
+            SimpleDialogs.createAndShow(MainActivity.this, SimpleDialogs.Type.Troubleshooting);
+        }
+        else if (id == R.id.selectSim) {
+            new SimSelectorDialogFragment().show(getSupportFragmentManager(), SimSelectorDialogFragment.TAG);
         }
 
         return super.onOptionsItemSelected(item);
     }
 
-    /** ADD PERSON related gymnastics*/
-    public void onAddPersonClick(View view) {
-
-        Intent intent = new Intent(
-                Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
-
-        startActivityForResult(intent, SmsLoc_Intents.RESULT_CONTACT_SELECTED);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data)
-    {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        switch (requestCode)
-        {
-            case SmsLoc_Intents.RESULT_BATT_SETTINGS:
-                invalidateOptionsMenu();
-                return;
-
-            case SmsLoc_Intents.RESULT_CONTACT_SELECTED:
-                if (resultCode == RESULT_OK) try {
-                    Cursor cursor =
-                            getContentResolver()
-                                    .query(data.getData(), null, null, null, null);
-                    cursor.moveToFirst();
-
-                    addPerson(
-                            cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER)),
-                            cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)));
-                    return;
-                }
-                catch (IllegalArgumentException e) {}
-                Toast.makeText(getApplicationContext(), "Failed to add contact", Toast.LENGTH_LONG).show();
-                break;
-        }
-    }
-
-    public void addPerson(String addr, String name)
-    {
-        final PeopleDataFile PEOPLEDATA = PeopleDataFile.getInstance(getApplicationContext());
-
-        try {
-            addr = SmsUtils.convertToE164PhoneNumFormat(addr, getApplicationContext());
-        }
-        catch (NumberParseException e) {
-           Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
-           return;
-        }
-
-        if (PEOPLEDATA.containsId(addr)) {
-            Toast.makeText(getApplicationContext(), "Contact exists", Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        final TypedArray colors = getResources().obtainTypedArray(R.array.letter_tile_colors);
-        final int color = colors.getColor((new Random()).nextInt(colors.length()), Color.DKGRAY);
-
-        synchronized (PEOPLEDATA.getLockObject())
-        {
-            PersonData personData = PEOPLEDATA.referenceOrCreateObject_unlocked(addr);
-            personData.setDisplayName(name, true);
-            personData.color = color;
-            personData.whitelisted = true;
-            PEOPLEDATA.writeFile_unlocked();
-        }
-
-        sendBroadcast(SmsLoc_Intents.generateIntent(addr, SmsLoc_Intents.ACTION_NEW_PERSON));
-        return;
+    public void openSettings(Intent intent) {
+        intent.setData(Uri.parse("package:" + getPackageName()));
+        mSettingsLauncher.launch(intent);
     }
 }

@@ -18,7 +18,6 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/constraintLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.main.PeopleFragment">
@@ -29,7 +28,7 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
             android:id="@+id/unauthorized_requests"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Show Unauthorized Requests"
+            android:text="@string/btn_show_unauthorized_req"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
             android:layout_marginTop="12dp"
@@ -38,7 +37,7 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
             android:id="@+id/clear_log"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Clear Log"
+            android:text="@string/btn_clear_log"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
             android:layout_marginTop="12dp"

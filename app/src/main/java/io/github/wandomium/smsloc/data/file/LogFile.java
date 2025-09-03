@@ -1,27 +1,25 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
 package io.github.wandomium.smsloc.data.file;
 
 import android.content.Context;
-import android.content.Intent;
 
 import io.github.wandomium.smsloc.data.base.BaseFile;
 import io.github.wandomium.smsloc.defs.SmsLoc_Common;
-import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.Utils;
 
 import java.io.IOException;
@@ -35,12 +33,12 @@ public class LogFile extends BaseFile
 
     private ArrayList<String> mLogEntries;
 
-    private LogFile(Context context, final Object lock)
+    private LogFile(Context context)
     {
         super(
-                FileType.data,
+                FileType.log,
                 String.format("%s-%s", SmsLoc_Common.Consts.LOG_FILENAME, Utils.getDateForFilename()),
-                context, lock
+                context, GET_INSTANCE_LOCK
         );
 
         loadFile();
@@ -51,7 +49,7 @@ public class LogFile extends BaseFile
         synchronized (GET_INSTANCE_LOCK)
         {
             if (mInstance == null) {
-                mInstance = new LogFile(context, GET_INSTANCE_LOCK);
+                mInstance = new LogFile(context);
             }
             return mInstance;
         }
@@ -64,7 +62,7 @@ public class LogFile extends BaseFile
         {
             mLogEntries.clear();
         }
-        mLogEntries = new ArrayList<String>(Files.readAllLines(mFilePath));
+        mLogEntries = new ArrayList<>(Files.readAllLines(mFilePath));
     }
 
     @Override
@@ -79,12 +77,9 @@ public class LogFile extends BaseFile
         {
             mLogEntries.add(0,msg);
             mLogEntries.add(0, Utils.msToStr(System.currentTimeMillis()));
-            mDiskUnsynched = true;
-            writeFile_unlocked();
+            mDiskUnsynced = true;
         }
-
-        mAppContext.sendBroadcast(new Intent(SmsLoc_Intents.ACTION_LOG_UPDATED));
-        return;
+        writeFileAsync();
     }
 
     public final ArrayList<String> readLog()
@@ -98,8 +93,8 @@ public class LogFile extends BaseFile
         synchronized (LOCK)
         {
             mLogEntries.clear();
-            mDiskUnsynched = true;
-            writeFile_unlocked();
+            mDiskUnsynced = true;
         }
+        writeFileAsync();
     }
 }

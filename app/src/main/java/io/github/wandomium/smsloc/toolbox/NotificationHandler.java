@@ -1,22 +1,20 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
 package io.github.wandomium.smsloc.toolbox;
-
-import static android.app.Notification.FOREGROUND_SERVICE_IMMEDIATE;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -43,21 +41,21 @@ public class NotificationHandler
     private static final String CHANNEL_NAME = CHANNEL_ID;
     private static final String GROUP_NAME = GROUP_ID;
 
-    private static final int FOREGROUND_ID = 1;
+    //private static final int FOREGROUND_ID = 1;
     private static final int SUMMARY_ID = 0;
     private static final int INIT_ID = 2;
 
     private int mNotId;
 
-    private Context mAppContext;
-    private NotificationManagerCompat mNotificationMngr;
+    private final Context mAppContext;
+    private final NotificationManagerCompat mNotificationMngr;
 
     private static NotificationHandler mInstance;
 
-    private PendingIntent mLauncherIntent;
+    private final PendingIntent mLauncherIntent;
     private Notification  mGroupingNotification;
 
-    public static final synchronized NotificationHandler getInstance(Context context)
+    public static synchronized NotificationHandler getInstance(Context context)
     {
         if (mInstance == null) {
             mInstance = new NotificationHandler(context);
@@ -67,7 +65,7 @@ public class NotificationHandler
     private NotificationHandler(Context context)
     {
         mNotId = INIT_ID;
-        // this one is a singelton so it's ok
+        // this one is a singleton so it's ok
         // app context will be alive as long as the app is alive, no weak ref needed
         mAppContext = context.getApplicationContext();
         mNotificationMngr = NotificationManagerCompat.from(mAppContext);
@@ -94,13 +92,12 @@ public class NotificationHandler
         if (!mNotificationMngr.areNotificationsEnabled()) {
             return true;
         }
+        //noinspection DataFlowIssue - This can only return null on API < 26. Our min is 29
         if (mNotificationMngr.getNotificationChannel(CHANNEL_ID).getImportance() == NotificationManager.IMPORTANCE_NONE) {
             return true;
         }
-        if (mNotificationMngr.getNotificationChannelGroup(GROUP_ID).isBlocked()) {
-            return true;
-        }
-        return false;
+        //noinspection DataFlowIssue - This can only return null on API < 28. Our min is 29
+        return mNotificationMngr.getNotificationChannelGroup(GROUP_ID).isBlocked();
     }
 
     /** Create a notification with sane defaults for this app
@@ -118,14 +115,21 @@ public class NotificationHandler
         if (mGroupingNotification == null) {
             mGroupingNotification = createGroupingNotification();
         }
-        if (mNotId == INIT_ID) {
-            mNotificationMngr.notify(SUMMARY_ID, mGroupingNotification);
-        }
+        try {
+            if (mNotId == INIT_ID) {
+                mNotificationMngr.notify(SUMMARY_ID, mGroupingNotification);
+            }
 
-        mNotificationMngr.notify(mNotId++, notification);
-        return mNotId - 1;  //if we want to update the notification later on
+            mNotificationMngr.notify(mNotId++, notification);
+            return mNotId - 1;  //if we want to update the notification later on
+        }
+        catch (SecurityException e) {
+            LogFile.getInstance(mAppContext).addLogEntry("ERROR: Missing POST_NOTIFICATION permission");
+            return mNotId;
+        }
     }
 
+    /** @noinspection UnusedReturnValue*/
     public final int createAndPostNotification(String displayName, String status, String detail)
     {
         return postNotification(createNotification(displayName, status, detail));
@@ -147,7 +151,8 @@ public class NotificationHandler
         resetNotificationId();
     }
 
-/***** INTERNAL *****/
+/***** INTERNAL
+ * @noinspection SameParameterValue*****/
     protected final Notification createNotification(
             @NonNull String title, @NonNull String content, String extra,
             boolean persist, boolean isOngoing, boolean enAppLaunch, boolean useGroup)
@@ -160,9 +165,7 @@ public class NotificationHandler
                 .setContentText(content)  //status
                 .setAutoCancel(!persist)
                 .setOngoing(isOngoing)
-                .setSmallIcon(R.drawable.ic_logo_24)
-                //otherwise the system waits for 10s before displaying the notification
-                .setForegroundServiceBehavior(FOREGROUND_SERVICE_IMMEDIATE);
+                .setSmallIcon(R.drawable.ic_logo_24);
         if (useGroup)
         {
             builder.setGroup(GROUP_ID);
@@ -184,7 +187,7 @@ public class NotificationHandler
 
     protected final Notification createGroupingNotification()
     {
-        final Intent intent = new Intent(mAppContext, NotGroupClearedRcvr.class).setAction("notification_cancelled");
+        final Intent intent = new Intent(mAppContext, NotGroupClearedRcv.class).setAction("notification_cancelled");
         final PendingIntent deleteIntent = PendingIntent.getBroadcast(mAppContext, 0, intent, PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder =
@@ -198,7 +201,7 @@ public class NotificationHandler
     }
 
     protected void resetNotificationId() { mNotId = INIT_ID; }
-    public static class NotGroupClearedRcvr extends BroadcastReceiver
+    public static class NotGroupClearedRcv extends BroadcastReceiver
     {
         @Override
         public void onReceive(Context context, Intent intent) {

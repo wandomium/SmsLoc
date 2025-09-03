@@ -1,16 +1,16 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
@@ -28,6 +28,7 @@ import android.util.SparseArray;
 import com.google.i18n.phonenumbers.NumberParseException;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
+import io.github.wandomium.smsloc.data.unit.PersonData;
 import io.github.wandomium.smsloc.defs.SmsLoc_Common;
 import io.github.wandomium.smsloc.data.file.SmsDayDataFile;
 import io.github.wandomium.smsloc.data.file.PeopleDataFile;
@@ -45,7 +46,7 @@ import io.github.wandomium.smsloc.toolbox.Utils;
  * It is kept as simple as possible since it will run on every received SMS
  * and sine it will execute in the background without explicit notification
  * to the user
- *
+ * <p>
  *
  * IMPORTANT: On API31 SYSTEM_ALERT_WINDOW permission will probably have to be used
  */
@@ -64,7 +65,8 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
     {
         synchronized (INSTANCE_LOCK)
         {
-            if (sActiveWakeLocks.contains(lockId)) {
+//            if (sActiveWakeLocks.contains(lockId)) { //not available in API29, equivalent to below call
+            if(sActiveWakeLocks.indexOfKey(lockId) >= 0) {
                 if (sActiveWakeLocks.get(lockId) != null) {
                     sActiveWakeLocks.get(lockId).release();
                 }
@@ -72,7 +74,6 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
             }
             Log.i(CLASS_TAG, "Wake lock released");
         }
-        return;
     }
 
     private void _releaseCurrentWakeLock()
@@ -95,22 +96,22 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
                 mCurrentLockId, powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SmsLoc:SmsReceiver"));
             sActiveWakeLocks.get(mCurrentLockId).setReferenceCounted(false); //only one fo each wake
             //sActiveWakeLocks.get(sNextId).acquire(SmsLoc_Settings.getGpsTimeoutInMin(context) * Utils.MIN_2_MS + 500);
-            sActiveWakeLocks.get(mCurrentLockId).acquire();
+            sActiveWakeLocks.get(mCurrentLockId).acquire((long) SmsLoc_Settings.GPS_TIMEOUT.getInt(context) * Utils.MIN_2_MS + 500);
         }
     }
 
     @Override
     public void onReceive(Context context, Intent intent)
     {
-        if(context == null || intent == null){
+        if(context == null || intent == null || intent.getAction() == null
+                || !intent.getAction().equals(Telephony.Sms.Intents.SMS_RECEIVED_ACTION)){
             return;
         }
 
         _acquireWakeLock(context);
 
         //We do not support multipart msgs
-        for(SmsMessage sms : Telephony.Sms.Intents.getMessagesFromIntent(intent))
-        try {
+        for(SmsMessage sms : Telephony.Sms.Intents.getMessagesFromIntent(intent)) try {
             if (sms == null) {
                 continue;
             }
@@ -120,28 +121,27 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
             final String geoData =
                     sms.getDisplayMessageBody().substring(SmsUtils.CODE_LEN);
             final String addr    =
-                    SmsUtils.convertToE164PhoneNumFormat(sms.getOriginatingAddress(), context);
+                    SmsUtils.convertToE164PhoneNumFormat(sms.getOriginatingAddress());
 
-            String broadcastResult;
+            String broadcastAction;
             switch (smsCode) {
-                case SmsUtils.REQUEST_CODE:
-                    broadcastResult = handleRequest(context, addr);
-                    break;
-                case SmsUtils.RESPONSE_CODE:
-                    broadcastResult = handleResponse(context, addr, geoData);
-                    break;
+                case SmsUtils.REQUEST_CODE:  broadcastAction = handleRequest(context, addr); break;
+                case SmsUtils.RESPONSE_CODE: broadcastAction = handleResponse(context, addr, geoData); break;
                 default:
                     continue;
             }
 
             //we can release the lock before this. If we are not awake, the updates on the
             //app are irrelevant because we are obviously not displaying anything
-            context.sendBroadcast(SmsLoc_Intents.generateIntent(addr, broadcastResult));
+            context.sendBroadcast(SmsLoc_Intents.generateIntent(context, addr, broadcastAction));
         }
-        catch (NumberParseException e)
-        {
+        catch (NumberParseException ignored) {}
+        finally {
+            /* Synchronously write, make sure it is stored */
+            if (!MainActivity.isCreated()) {
+                Utils.closeAllFiles(context);
+            }
             _releaseCurrentWakeLock();
-            return; //smth not ok with number format
         }
     }
 
@@ -155,8 +155,8 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
         synchronized (DAYDATA.getLockObject())
         {
             DAYDATA.referenceOrCreateObject_unlocked(addr).responseReceived(location);
-            DAYDATA.writeFile_unlocked();
         }
+        DAYDATA.writeFileAsync();
 
         String summary = "Response from ";
         String status  = "Location " + (location.dataValid() ? "VALID" : "INVALID");
@@ -166,7 +166,7 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
             status  += ", unrequested!";
         }
         else {
-            summary += PEOPLEDATA.getDataEntry(addr).displayName;
+            summary += PEOPLEDATA.getDataEntry(addr).getDisplayName();
         }
 
         final String details = location.dataValid() ?
@@ -183,14 +183,20 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
     protected String handleRequest(Context context, final String addr) {
 
         final PeopleDataFile PEOPLEDATA = PeopleDataFile.getInstance(context);
+        final SmsDayDataFile DAYDATA = SmsDayDataFile.getInstance(context);
 
         if (SmsLoc_Settings.IGNORE_WHITELIST.getBool(context) || PEOPLEDATA.containsId(addr)) {
+
+            synchronized (DAYDATA.getLockObject())
+            {
+                DAYDATA.referenceOrCreateObject_unlocked(addr).requestReceived();
+            }
+            DAYDATA.writeFileAsync();
+
             Intent intent = new Intent(context, LocationRetrieverFgService.class);
             intent.putExtra(SmsLoc_Intents.EXTRA_ADDR, addr);
             intent.putExtra(SmsLoc_Intents.EXTRA_WAKE_LOCK_ID, mCurrentLockId);
 
-            //TODO-Major Receheck these getActivityContext for leaks
-            //startWakefulService(context, intent);
             try {
                 context.startForegroundService(intent);
             }
@@ -221,11 +227,12 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
 
             synchronized (PEOPLEDATA.getLockObject())
             {
-                PEOPLEDATA.referenceOrCreateObject_unlocked(SmsLoc_Common.Consts.UNAUTHORIZED_ID)
-                    .displayName += String.format("\n%s, %s",
-                        addr, Utils.msToStr(System.currentTimeMillis()));
-                PEOPLEDATA.writeFile_unlocked();
+                PersonData person = PEOPLEDATA.referenceOrCreateObject_unlocked(SmsLoc_Common.Consts.UNAUTHORIZED_ID);
+                String displayName = person.getDisplayName() +
+                        String.format("\n%s, %s", addr, Utils.msToStr(System.currentTimeMillis()));
+                person.setDisplayName(displayName);
             }
+            PEOPLEDATA.writeFileAsync();
 
             _releaseCurrentWakeLock();
             return SmsLoc_Intents.ACTION_NOT_WHITELISTED;

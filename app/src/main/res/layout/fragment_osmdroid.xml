@@ -17,12 +17,13 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/MapsLayoutOsmdroid"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".ui.main.OsmdroidMapFragment">
-    <org.osmdroid.views.MapView android:id="@+id/mapOsmDroid"
+<!--    <org.osmdroid.views.MapView android:id="@+id/mapOsmDroid"-->
+    <FrameLayout
+        android:id="@+id/map_container"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent" />
 </LinearLayout>

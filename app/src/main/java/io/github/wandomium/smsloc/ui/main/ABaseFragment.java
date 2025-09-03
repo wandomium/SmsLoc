@@ -1,16 +1,16 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
@@ -23,25 +23,38 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import io.github.wandomium.smsloc.toolbox.ABaseBrdcstRcvr;
+import io.github.wandomium.smsloc.toolbox.ABaseBrdcstRcv;
 
 import java.util.ArrayList;
 
 public abstract class ABaseFragment extends Fragment
 {
-    public static final String ARG_SECTION_NUMBER = "section_number";
+    private static final String ARG_SECTION_NUMBER = "section_number";
 
-    protected ArrayList<ABaseBrdcstRcvr> mReceiverList;
+    protected final ArrayList<ABaseBrdcstRcv<? extends ABaseFragment>> mReceiverList;
     protected final int mLayoutId;
+    protected View mViewBinding;
 
     protected abstract void _createBroadcastReceivers();
 
-    protected ABaseFragment(int layoutId)
-    {
+    protected ABaseFragment(int layoutId) {
         mLayoutId = layoutId;
-        mReceiverList = new ArrayList<ABaseBrdcstRcvr>();
+        mReceiverList = new ArrayList<>();
+    }
+
+    protected static void _initInstance(final ABaseFragment instance, final int position) {
+        Bundle bundle = new Bundle();
+        bundle.putInt(ABaseFragment.ARG_SECTION_NUMBER, position);
+        instance.setArguments(bundle);
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState)
+    {
+        super.onCreate(savedInstanceState);
     }
 
     // It is recommended to only inflate the layout in this method and move logic that operates on
@@ -51,18 +64,21 @@ public abstract class ABaseFragment extends Fragment
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container, @Nullable Bundle savedInstanceState)
     {
-        return inflater.inflate(mLayoutId, container, false);
+        mViewBinding = inflater.inflate(mLayoutId, container, false);
+        return mViewBinding;
     }
 
-    //Create and register all the intent receivers
+    //Create and register all the intent receivers to this fragment context
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState)
     {
         super.onViewCreated(view, savedInstanceState);
 
         _createBroadcastReceivers();
-        for (ABaseBrdcstRcvr r : mReceiverList) {
-            getActivity().registerReceiver(r, r.getIntentFilter());
+        for (ABaseBrdcstRcv<? extends ABaseFragment> r : mReceiverList) {
+                // requireContext().registerReceiver(r, r.getIntentFilter(), Context.RECEIVER_NOT_EXPORTED);
+                // This one also works on API < 33
+                ContextCompat.registerReceiver(requireContext(), r, r.getIntentFilter(), ContextCompat.RECEIVER_NOT_EXPORTED);
         }
     }
 
@@ -71,10 +87,10 @@ public abstract class ABaseFragment extends Fragment
     @Override
     public void onDestroyView()
     {
-        for (ABaseBrdcstRcvr r : mReceiverList) {
-            getActivity().unregisterReceiver(r);
+        for (ABaseBrdcstRcv<? extends ABaseFragment> r : mReceiverList) {
+            requireContext().unregisterReceiver(r);
         }
-
         super.onDestroyView();
+        mViewBinding = null;
     }
 }

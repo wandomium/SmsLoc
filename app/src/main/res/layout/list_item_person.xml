@@ -15,17 +15,20 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
 -->
+<!-- This one is used in PeopleFragment -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="100dp"
-    android:backgroundTint="@color/cardview_light_background">
+    android:backgroundTint="@color/cardview_light_background"
+    tools:keep="@layout/list_item_person">
     <TextView
         android:id="@+id/person_icon"
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:textColor="@android:color/white"
         android:textStyle="bold"
-        android:textSize="20dp"
+        android:textSize="20sp"
         android:gravity="center_vertical|center_horizontal"
         android:textAlignment="gravity"
         android:layout_alignParentStart="true"
@@ -37,13 +40,15 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
         android:layout_height="match_parent"
         android:layout_toEndOf="@id/person_icon"
         android:gravity="fill_horizontal|center_vertical"
+        android:padding="10dp"
         android:textAlignment="gravity"
-        android:padding="10dp"/>
+        android:layout_toStartOf="@id/status_icon"/>
     <ImageView
         android:id="@+id/status_icon"
         android:layout_alignParentEnd="true"
         android:layout_alignParentTop="true"
         android:layout_width="30dp"
         android:layout_height="30dp"
-        android:padding="5dp" />
+        android:importantForAccessibility="no"
+        android:padding="5dp"/>
 </RelativeLayout>

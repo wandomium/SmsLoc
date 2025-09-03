@@ -1,24 +1,24 @@
 <resources>
     <string name="app_name">SmsLoc</string>
-    <string name="interval_hint">Time interval between GPS points</string>
-    <string name="shared_preferences_query_sent">com.example.loc.sent</string>
-    <string name="shared_preferences_query_rcvd">com.example.loc.rcvd</string>
-    <string name="shared_preferences_intent">sharedPerf</string>
     <!-- ALERTS -->
     <string name="force_stop_alert_title">Force Stop Warning</string>
-    <string name="force_stop_alert_msg">If the application is force stopped, Android will disable service wake up on SMS location requests.\n\nTo re-enable, app must be started manually once (this will re-register the service with the Android System)</string>
+    <string name="force_stop_alert_msg">If the app is force stopped, it will be disabled by the system.\n\nTo re-enable, open the app manually (once).</string>
     <string name="bg_autostart_alert_title">Background Autostart</string>
-    <string name="bg_autostart_alert_msg">On some phones, background autostart of applications needs to be explicitly enabled. Applicable on, for ex., Xiaomi MIUI (tested)</string>
-    <string name="battery_saver_alert_title">BATTERY SAVER ACTIVE</string>
+    <string name="bg_autostart_alert_msg">On some phones, background autostart needs to be enabled in System Settings. Applicable on, for ex., Xiaomi MIUI (tested)</string>
     <string name="battery_saver_alert_msg">Can interfere with getting a GPS fix and running app in background.\nDisable in App Settings under Battery or BatterySaver</string>
-    <string name="notifications_alert_title">NOTIFICATIONS DISABLED</string>
-    <string name="notifications_alert_msg"></string>
     <!-- APPLICATION SETTINGS -->
-    <string name="battery_saver_request_title">Battery Saver Exemption</string>
-    <string name="battery_saver_request_msg">To enable responding to SMS location queries disable battery optimization for this app (Under Battery or Battery Saver)</string>
-    <string name="notifications_request_title">Enable Notifications</string>
-    <string name="notifications_request_msg">""</string>
     <!-- PERMISSION REASONS -->
     <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="sim_select_msg">Default option uses System default SIM for voice calls. If default SIM is not selected in system settings, SMS sending will not work. </string>
+    <string name="per_loc_rationale">App needs access to GPS location (FINE_LOCATION) all the time (BACKGROUND_LOCATION) so it can respond to incoming location requests.</string>
+    <string name="per_sms_rationale">App needs RECEIVE_SMS permission to detect location requests and SEND_SMS permission for responding to and sending requests.</string>
+    <!-- GUI ELEMENTS -->
+    <string name="btn_show_unauthorized_req">Show unauthorized requests</string>
+    <string name="btn_clear_log">Clear Log</string>
+    <string name="checkbox_whitelist">Allow requests from anyone</string>
+    <string name="gps_fix_timeout">GPS Fix Timeout</string>
+    <string name="troubleshooting">Troubleshooting</string>
+    <string name="select_sim_card">Select SIM card</string>
+    <string name="bug_report">Bug Report</string>
+    <string name="permission">permission</string>
 </resources>

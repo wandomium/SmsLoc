@@ -1,16 +1,16 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
@@ -21,6 +21,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 
 import androidx.annotation.ColorInt;
+import androidx.annotation.NonNull;
 
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
@@ -28,10 +29,10 @@ import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.milestones.MilestoneManager;
 import org.osmdroid.views.overlay.milestones.MilestoneVertexLister;
+
 import io.github.wandomium.smsloc.data.file.PeopleDataFile;
 import io.github.wandomium.smsloc.data.unit.GpsData;
 import io.github.wandomium.smsloc.data.unit.PersonData;
-import io.github.wandomium.smsloc.toolbox.ATimeoutQuery;
 import io.github.wandomium.smsloc.ui.main.AMapFragment;
 
 import java.lang.ref.WeakReference;
@@ -60,10 +61,13 @@ public class OsmdroidTracksDisplay extends AMapTracksDisplay
     @Override
     public IMapTrack removeTrack(String addr)
     {
-        IMapTrack track = super.removeTrack(addr);
-        mMapView.get().getOverlayManager().remove(track);
-
-        return track;
+        final IMapTrack track = super.removeTrack(addr);
+        if (track instanceof OsmdroidTrack) {
+            if (mMapView.get().getOverlayManager().remove(track)) {
+                return track;
+            }
+        }
+        return null;
     }
 
     /**
@@ -107,6 +111,7 @@ public class OsmdroidTracksDisplay extends AMapTracksDisplay
             this.gpsData = gpsData;
         }
 
+        @NonNull
         @Override
         public String toString()
         {
@@ -116,10 +121,9 @@ public class OsmdroidTracksDisplay extends AMapTracksDisplay
 
     protected static class OsmdroidTrack extends Polyline implements IMapTrack
     {
-        protected PersonData mPerson;
-        private GeoPointExt mClickedPoint;
+        protected final PersonData mPerson;
 
-        private OsmdroidTrack(PersonData personData, MapView mapView)
+        private OsmdroidTrack(@NonNull PersonData personData, @NonNull MapView mapView)
         {
             super(mapView);
 
@@ -127,11 +131,11 @@ public class OsmdroidTracksDisplay extends AMapTracksDisplay
 
             List<MilestoneManager> mngrs = new ArrayList<>(1);
             mngrs.add(new MilestoneManager(new MilestoneVertexLister(),
-                    new TrackPointsDisplayer(mPerson.color, mPerson.initials)));
+                    new TrackPointsDisplay(mPerson.getColor(), mPerson.getInitials())));
             this.setMilestoneManagers(mngrs);
 
             this.getOutlinePaint().setColor(Color.BLACK);
-            this.setTitle(mPerson.displayName);
+            this.setTitle(mPerson.getDisplayName());
         }
 
         @Override
@@ -148,17 +152,16 @@ public class OsmdroidTracksDisplay extends AMapTracksDisplay
             {
                 if (p.distanceToAsDouble(geoPoint) < 100.0) //TODO: adapt this based on zoom value
                 {
-                    mClickedPoint = (GeoPointExt) p;
+                    final GeoPointExt clickedPoint = (GeoPointExt) p;
 
                     // default info window statement
-                    this.setInfoWindowLocation(mClickedPoint);
-                    this.setSubDescription(AMapFragment.markerDataString(mClickedPoint.gpsData));
+                    this.setInfoWindowLocation(clickedPoint);
+                    this.setSubDescription(AMapFragment.markerDataString(clickedPoint.gpsData));
                     this.showInfoWindow();
 
                     return true;
                 }
             }
-            mClickedPoint = null;
             mapView.zoomToBoundingBox(polyline.getBounds(), true, 200);
             polyline.closeInfoWindow();
             return false;
@@ -177,18 +180,26 @@ public class OsmdroidTracksDisplay extends AMapTracksDisplay
                 this.addPoint(this.getActualPoints().get(0));
             }
         }
+        @Override
+        public boolean equals(Object o)
+        {
+            if (o instanceof OsmdroidTrack) {
+                return ((OsmdroidTrack)o).mPerson.getAddr().equals(this.mPerson.getAddr());
+            }
+            return false;
+        }
 
         /** Display markers - received gps datapoints */
-        private class TrackPointsDisplayer extends org.osmdroid.views.overlay.milestones.MilestoneDisplayer
+        private static class TrackPointsDisplay extends org.osmdroid.views.overlay.milestones.MilestoneDisplayer
         {
-            private Paint  mTextPaint;
-            private Paint  mMarkerPaint;
-            private String mInitials = "??";
+            private final Paint  mTextPaint;
+            private final Paint  mMarkerPaint;
+            private final String mInitials;
 
-            private TrackPointsDisplayer(@ColorInt int color, String initials)
+            private TrackPointsDisplay(@ColorInt int color, String initials)
             {
                 super(0, false);
-                mInitials = initials;
+                mInitials = initials != null ? initials : "??";
                 mTextPaint = new Paint();
                 mTextPaint.setColor(Color.WHITE);
                 mTextPaint.setTextSize(40);

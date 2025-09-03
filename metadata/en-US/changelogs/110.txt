@@ -1,0 +1,27 @@
+Features added:
+[x] Added support for SIM selection
+[x] Reject contact if there is no country code when adding a number (see issue report #2)
+[x] Support for API29
+[x] Upgrade to target Android 15 (API 35)
+[x] Simplify permission requests
+[x] Added bug Report item to the menu
+
+Permission changes:
+[x] Added REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (see issue report #3)
+    Previously used method of opening the settings and letting the user select this on his own no longer works on Android 15 and Pixel phones. This menu is completely hidden and we cannot navigate the user to any settings (app or system) where this could be changed.
+    The only possible way to ask for this permission is to fire this intent explicitly (which is depreciated as per PlayStore but is now the only way that works on all phones).
+[x] POST_NOTIFICATIONS
+    Needs to be explicitly requested on API 34
+[x] FOREGROUND_SERVICE_TYPE_LOCATION
+    Was FOREGROUND_SERVICE in previous version, on API 34 it's more specific
+[x] READ_PHONE_STATE
+    A completely optional permission, that is required if the user wants to use the SIM selection functionality. The permission is not required for operation, the user will be asked for it only when trying to change the SIM card settings.
+
+Bugfixes:
+[x] About menu does nothing (issue #4)
+[x] Battery saver detection issue on Android 15 (issue #3)
+[x] Missing country code can lead to rejected phone number (issue #2)
+[x] Issues with people list
+    [x] List of people not showing numbers after a failed add
+    [x] The location icon does not change colour (probably related to failed add bug from before)
+    [x] Still needs testing on number rejection

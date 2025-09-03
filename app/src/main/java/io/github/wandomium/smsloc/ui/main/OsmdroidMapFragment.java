@@ -1,16 +1,16 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
@@ -20,14 +20,15 @@ import android.app.Activity;
 import android.content.Context;
 import android.location.Location;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.osmdroid.config.Configuration;
+import org.osmdroid.config.DefaultConfigurationProvider;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
@@ -38,13 +39,19 @@ import org.osmdroid.views.overlay.ScaleBarOverlay;
 import org.osmdroid.views.overlay.compass.CompassOverlay;
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
 
+import io.github.wandomium.smsloc.BuildConfig;
 import io.github.wandomium.smsloc.R;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
+
+import java.io.File;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import io.github.wandomium.smsloc.data.file.PeopleDataFile;
 import io.github.wandomium.smsloc.data.file.SmsDayDataFile;
-import io.github.wandomium.smsloc.defs.SmsLoc_Common;
 import io.github.wandomium.smsloc.mapdata.OsmdroidTracksDisplay;
+import io.github.wandomium.smsloc.toolbox.Utils;
 
 
 public class OsmdroidMapFragment extends AMapFragment
@@ -53,41 +60,42 @@ public class OsmdroidMapFragment extends AMapFragment
     private int myLocationOverlayIdx;
     private final double mDefaultZoom = 12.0;
 
-    protected OsmdroidMapFragment() { super(R.layout.fragment_osmdroid);}
-
-    public Location getLastFix()
-    {
-        // getMyLocation calls getLastFix and converts from android.Location to GeoPoint
-        return ((MyLocationNewOverlay)mMapView.getOverlays().get(myLocationOverlayIdx)).getLastFix();
+    public OsmdroidMapFragment() { super(R.layout.fragment_osmdroid);}
+    public static OsmdroidMapFragment newInstance(final int position) {
+        final OsmdroidMapFragment newInstance = new OsmdroidMapFragment();
+        _initInstance(newInstance, position);
+        return newInstance;
     }
 
-    @Override
-    public void _clearPopups() { }
-
-    @Override
-    protected void _zoomToLastPoint()
+    public static class PredefinedConfigProvider extends DefaultConfigurationProvider
     {
-        try {
-            mMapView.getController().animateTo(new GeoPoint(mLastUpdateLoc.lat, mLastUpdateLoc.lon), mDefaultZoom, null);
-        } catch (NullPointerException e) {}
-    }
+        public PredefinedConfigProvider(Context ctx) {
+            userAgentValue = BuildConfig.APPLICATION_ID;
+            osmdroidBasePath = new File(ctx.getExternalFilesDir(null), "osmdroid");
+            osmdroidTileCache = new File(osmdroidBasePath, "tiles");
+            if (!osmdroidTileCache.exists()) {
+                if (!osmdroidTileCache.mkdirs()) {
+                    /* Set this to null and have osmdroid deal with it */
+                    osmdroidTileCache = null;
+                    osmdroidBasePath = null;
+                }
+            }
+        }
 
-    @Override
-    public void onCreate(Bundle savedInstanceState)
-    {
-        super.onCreate(savedInstanceState);
+        /* TODO: this is strange. version 6.1.20 should no longer call mkdirs in this getter (based
+         * on github. But it is clear that it's called from StrictMode reports
+         *
+         * Override to prevent StrictMode violations as much as we can
+         */
+        @Override
+        public File getOsmdroidTileCache() {
+            return osmdroidTileCache;
+        }
 
-        //load/initialize the osmdroid configuration, this can be done
-        final Context ctx = this.getActivity();
-        Configuration.getInstance().setUserAgentValue(SmsLoc_Common.Consts.APP_NAME);
-        Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
-        //setting this before the layout is inflated is a good idea
-        //it 'should' ensure that the map has a writable location for the map cache, even without permissions
-        //if no tiles are displayed, you can try overriding the cache path using Configuration.getInstance().setCachePath
-        //see also StorageUtils
-        //note, the load method also sets the HTTP User Agent to your application's package name, abusing osm's
-        //tile servers will get you banned based on this string
-
+        @Override
+        public File getOsmdroidTileCache(Context ctx) {
+            return osmdroidTileCache;
+        }
     }
 
     @Override
@@ -95,10 +103,73 @@ public class OsmdroidMapFragment extends AMapFragment
     {
         super.onViewCreated(view, savedInstanceState);
 
-        //inflate and create the map
-        mMapView = (MapView) view.findViewById(R.id.mapOsmDroid);
-        mMapView.setTileSource(TileSourceFactory.MAPNIK);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+//            _loadConfig(this.requireActivity().getApplicationContext());
+            Configuration.setConfigurationProvider(new PredefinedConfigProvider(
+                    this.requireActivity().getApplicationContext()
+            ));
 
+            requireActivity().runOnUiThread(() -> {
+                /* Create map view. This will violate strict mode because osmdroid does I/O
+                   TODO: check if this can be fixed by using a custom config provider
+                 */
+                final String msg = OsmdroidMapFragment.class.getSimpleName() + ":new MapView(getContext())";
+                Utils.Debug.strictModeDiskIOOff(msg);
+                mMapView = new MapView(getContext());
+                Utils.Debug.strictModeDiskIOOn(msg);
+
+                /* add to container */
+                FrameLayout container = view.findViewById(R.id.map_container);
+                container.addView(mMapView);
+
+                /* Configure map */
+                _configureMapView();
+            });
+
+            executor.shutdownNow();
+        });
+    }
+
+    @Override
+    public void onDestroyView()
+    {
+        mTracksDisplay.removeAll();
+        mTracksDisplay = null;
+
+        mMapView.getOverlays().clear();
+        mMapView.onDetach();
+        mMapView = null;
+
+        super.onDestroyView();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (mMapView != null) {
+            mMapView.onResume(); //needed for compass, my location overlays, v6.0.0 and up
+        }
+    }
+
+    @Override
+    public void onPause()
+    {
+        //!! will call onPause on overlays. will for ex. disable location overlay
+        if (mMapView != null) {
+            mMapView.onPause();  //needed for compass, my location overlays, v6.0.0 and up
+        }
+        super.onPause();
+    }
+
+    public Location getLastFix() {
+        // getMyLocation calls getLastFix and converts from android.Location to GeoPoint
+        return ((MyLocationNewOverlay)mMapView.getOverlays().get(myLocationOverlayIdx)).getLastFix();
+    }
+
+    private void _configureMapView()
+    {
+        mMapView.setTileSource(TileSourceFactory.MAPNIK);
         mMapView.setMultiTouchControls(true);
         mMapView.setHorizontalMapRepetitionEnabled(false);
         mMapView.setVerticalMapRepetitionEnabled(false);
@@ -108,26 +179,24 @@ public class OsmdroidMapFragment extends AMapFragment
         mTracksDisplay = new OsmdroidTracksDisplay(mMapView, PeopleDataFile.getInstance(getContext()));
         mTracksDisplay.initFromDayData(SmsDayDataFile.getInstance(getContext()).getDataAll());
 
-        // Initial bounds show all the tracks
+        /* Initial bounds show all the tracks */
         final BoundingBox initBounds = ((OsmdroidTracksDisplay) mTracksDisplay).getBounds();
         if (initBounds != null) {
             mMapView.addOnFirstLayoutListener(
-                    (View v, int left, int top, int right, int bottom) -> {
-                        ((MapView) v).zoomToBoundingBox(initBounds, true, 200);
-                    });
+                    (View v, int left, int top, int right, int bottom) -> ((MapView) v).zoomToBoundingBox(initBounds, true, 200));
         }
 
-        //Display copyright
-        mMapView.getOverlays().add(new CopyrightOverlay(getContext()));
+        /* Display copyright */
+        mMapView.getOverlays().add(new CopyrightOverlay(requireContext()));
 
-        //On screen compass
+        /* On screen compass */
         {
-            final CompassOverlay overlay = new CompassOverlay(getContext(), new InternalCompassOrientationProvider(getContext()), mMapView);
+            final CompassOverlay overlay = new CompassOverlay(requireContext(), new InternalCompassOrientationProvider(requireContext()), mMapView);
             overlay.enableCompass();
             mMapView.getOverlays().add(overlay);
         }
 
-        //Scale bar
+        /* Scale bar */
         {
             final ScaleBarOverlay overlay = new ScaleBarOverlay(mMapView);
             overlay.setAlignBottom(true);
@@ -136,10 +205,12 @@ public class OsmdroidMapFragment extends AMapFragment
             mMapView.getOverlays().add(overlay);
         }
 
-        //My location
+        /* My location */
         {
-            final MyLocationNewOverlay overlay = new MyLocationNewOverlay(new GpsMyLocationProvider(getContext()), mMapView);
+            final MyLocationNewOverlay overlay = new MyLocationNewOverlay(new GpsMyLocationProvider(requireContext()), mMapView);
             overlay.enableMyLocation();
+            //This would automatically center on user location but we don't want it. We want to center on
+            //location updates received as responses
             //overlay.enableFollowLocation();
             overlay.setDrawAccuracyEnabled(true);
 
@@ -149,12 +220,11 @@ public class OsmdroidMapFragment extends AMapFragment
                     final Activity act = OsmdroidMapFragment.this.getActivity();
                     if (act != null) {
                         act.runOnUiThread(() -> {
-                            if (overlay.getMyLocation() != null)
-                            {
+                            if (overlay.getMyLocation() != null) {
                                 OsmdroidMapFragment.this.mMapView.getController().animateTo(overlay.getMyLocation(), mDefaultZoom, null);
                             }
                             Toast.makeText(OsmdroidMapFragment.this.getContext(),
-                                    "GPS fix " + overlay.getMyLocation() != null ? "GPS fix OK" : "GPS fix FAIL", Toast.LENGTH_LONG).show();
+                                    overlay.getMyLocation() != null ? "GPS fix OK" : "GPS fix FAIL", Toast.LENGTH_LONG).show();
                         });
                     }
                 });
@@ -165,40 +235,12 @@ public class OsmdroidMapFragment extends AMapFragment
     }
 
     @Override
-    public void onDestroyView()
-    {
-        mTracksDisplay.removeAll();
-        mTracksDisplay = null;
-
-//        mMapView.getOverlayManager().removeAll(mMapView.getOverlays());
-        mMapView.getOverlays().clear();
-        mMapView = null;
-
-        super.onDestroyView();
-    }
+    protected void _clearPopups() { }
 
     @Override
-    public void onResume() {
-        super.onResume();
-        //this will refresh the osmdroid configuration on resuming.
-        //if you make changes to the configuration, use
-//        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-//        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this));
-
-        mMapView.onResume(); //needed for compass, my location overlays, v6.0.0 and up
-    }
-
-    @Override
-    public void onPause()
-    {
-        //this will refresh the osmdroid configuration on resuming.
-        //if you make changes to the configuration, use
-//        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-//        Configuration.getInstance().save(this, prefs);
-
-
-        //!! will call onPause on overlays. will for ex. disable location overlay
-        mMapView.onPause();  //needed for compass, my location overlays, v6.0.0 and up
-        super.onPause();
+    protected void _zoomToLastPoint() {
+        if (mLastUpdateLoc != null && mLastUpdateLoc.dataValid()) {
+            mMapView.getController().animateTo(new GeoPoint(mLastUpdateLoc.lat, mLastUpdateLoc.lon), mDefaultZoom, null);
+        }
     }
 }

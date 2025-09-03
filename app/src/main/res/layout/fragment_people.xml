@@ -22,20 +22,16 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.main.PeopleFragment">
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
         <CheckBox
             android:id="@+id/ignoreWhitelist"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:text="Allow requests from anyone"
+            android:layout_alignParentEnd="true"
+            android:text="@string/checkbox_whitelist"
             android:layout_marginEnd="12dp"
             android:layout_marginTop="12dp"
             android:layoutDirection="rtl" />
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-            xmlns:android="http://schemas.android.com/apk/res/android"
             android:id="@+id/refresh_people_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -53,23 +49,14 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
             android:layout_alignParentBottom="true"
             android:layout_alignParentEnd="true">
                 <com.google.android.material.floatingactionbutton.FloatingActionButton
-                    android:id="@+id/add_person"
                     android:src="@drawable/ic_plus_24"
-                    android:onClick="onAddPersonClick"
+                    android:id="@+id/add_person"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:padding="10dp"
                     android:layout_margin="16dp"
-                    android:backgroundTint="@color/colorPrimary" />
-<!--                <com.google.android.material.floatingactionbutton.FloatingActionButton-->
-<!--                    android:id="@+id/refresh_my_location"-->
-<!--                    android:src="@drawable/ic_gps_24"-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:layout_alignParentStart="true"-->
-<!--                    android:padding="10dp"-->
-<!--                    android:layout_margin="16dp"-->
-<!--                    android:backgroundTint="@color/colorPrimary" />-->
+                    android:backgroundTint="@color/colorPrimary"
+                    tools:ignore="ContentDescription" />
         </RelativeLayout>
 </RelativeLayout>

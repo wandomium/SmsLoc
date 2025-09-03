@@ -1,16 +1,16 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
@@ -27,22 +27,22 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Helper class for query with timeout.
- *
+ * <p>
  * Once shutdown is called, the resources are freed and the query cannot be reused
  *
  * @param <T>
  */
 public abstract class ATimeoutQuery<T>
 {
-    private Callback mCallback;
+    private Callback<T> mCallback;
 
-    private ScheduledThreadPoolExecutor mScheduler;
+    private final ScheduledThreadPoolExecutor mScheduler;
 
     private Runnable mTimeoutRunnable;
-    private ScheduledFuture mTimeoutFuture;
+    private ScheduledFuture<?> mTimeoutFuture;
 
     private Runnable mQueryRunnable;
-    private ScheduledFuture mQueryFuture;
+    private ScheduledFuture<?> mQueryFuture;
 
     @FunctionalInterface
     public interface Callback<T>
@@ -51,9 +51,9 @@ public abstract class ATimeoutQuery<T>
     }
 
     /**
-     * @brief The main query thread, should be a synchronous call
-     *
-     * Note: This should be interruptible trough overrride (or rather extend) of
+     * The main query thread, should be a synchronous call
+     * <p>
+     * Note: This should be interruptible trough override (or rather extend) of
      * default cancelCall call or
      * by checking for thread interrupted exception (initiated trough future.cancel in
      * default cancelCall implementation)
@@ -62,7 +62,7 @@ public abstract class ATimeoutQuery<T>
      */
     protected abstract T _execute();
 
-    public ATimeoutQuery(@NonNull Callback callback)
+    public ATimeoutQuery(@NonNull Callback<T> callback)
     {
         mCallback = callback;
 
@@ -89,11 +89,11 @@ public abstract class ATimeoutQuery<T>
         }
 
         // remove any scheduled tasks that were not canceled, mem cleanup
-        // has no efect on execution
+        // has no effect on execution
         mScheduler.purge();
 
         // runnable is assigned to the Future object returned here
-        // scheduled runnables are not plced directly into queue. What is in
+        // scheduled runnables are not placed directly into queue. What is in
         // the queue is the returned Future
         mTimeoutFuture = mScheduler.schedule(mTimeoutRunnable, timeoutMs, TimeUnit.MILLISECONDS);
         mQueryFuture = mScheduler.schedule(mQueryRunnable, 0, TimeUnit.NANOSECONDS);
@@ -102,13 +102,14 @@ public abstract class ATimeoutQuery<T>
     }
 
     /**
-     * @brief should stop the process being executed in _execute.
+     * Should stop the process being executed in _execute.
      * Default implementation calls future.cancel and expects the
      * process in _execute to be interruptible
+     * @noinspection UnusedReturnValue
      */
     public boolean cancelCall()
     {
-        Log.i("TimeoutQuery", "cancellCall");
+        Log.i("TimeoutQuery", "cancelCall");
         // Canceled tasks get removed immediately due to policy set at the beginning
         try {
             mTimeoutFuture.cancel(true);
@@ -120,6 +121,7 @@ public abstract class ATimeoutQuery<T>
         return mScheduler.getActiveCount() == 0;
     }
 
+    /** @noinspection CommentedOutCode*/
     public boolean shutdown()
     {
         mScheduler.shutdown();

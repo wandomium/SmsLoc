@@ -1,16 +1,16 @@
 /**
  * This file is part of SmsLoc.
- *
+ * <p>
  * SmsLoc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License,
  * or (at your option) any later version.
- *
+ * <p>
  * SmsLoc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU General Public License
  * along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
  */
@@ -42,7 +42,7 @@ public class DataUnitFile<T extends DataUnit<T>> extends BaseFile
 
     protected HashMap<String,T> mData;
 
-    /** This should be called from deriving class - singelton - in a locked state
+    /** This should be called from deriving class - singleton - in a locked state
      */
     protected DataUnitFile(FileType fileType, String filename,
                            Context context, final Object lock, Type gsonTypeToken, DataUnitFactory<T> factory)
@@ -61,12 +61,9 @@ public class DataUnitFile<T extends DataUnit<T>> extends BaseFile
         mData = new HashMap<>();
 
         Gson gson = new Gson();
-        T[] data = null;
+        T[] data;
 
         try {
-//            Type empMapType = new TypeToken<HashMap<String, T>>() {}.getType();
-//            gson.fromJson(new FileReader(mFilename), empMapType);
-
             final String text = new String(Files.readAllBytes(mFilePath));
             data = gson.fromJson(text, FILE_DATA_FORMAT);
             if (data == null) {
@@ -92,6 +89,8 @@ public class DataUnitFile<T extends DataUnit<T>> extends BaseFile
                 Log.e(CLASS_TAG, errMsg.toString());
             }
         }
+        //we are still supporting API29, there is no need for this
+        //noinspection SizeReplaceableByIsEmpty
         if (errMsg.length() == 0) {
             return;
         }
@@ -119,7 +118,7 @@ public class DataUnitFile<T extends DataUnit<T>> extends BaseFile
         synchronized (LOCK)
         {
             mData.remove(addr);
-            mDiskUnsynched = true;
+            mDiskUnsynced = true;
         }
     }
 
@@ -128,7 +127,7 @@ public class DataUnitFile<T extends DataUnit<T>> extends BaseFile
         synchronized (LOCK)
         {
             mData.put(id, dataItem.getUnitCopy());
-            mDiskUnsynched = true;
+            mDiskUnsynced = true;
         }
     }
 
@@ -136,6 +135,7 @@ public class DataUnitFile<T extends DataUnit<T>> extends BaseFile
     {
         synchronized (LOCK)
         {
+            //noinspection DataFlowIssue - there is none because we check if element exists
             return mData.containsKey(id)
                     ? mData.get(id).getUnitCopy() : null;
         }
@@ -147,6 +147,7 @@ public class DataUnitFile<T extends DataUnit<T>> extends BaseFile
         {
             HashMap<String, T> retval = new HashMap<>();
             for (String id : mData.keySet()) {
+                //noinspection DataFlowIssue - there is none because we are iterating in a locked loop over key set
                 retval.put(id, mData.get(id).getUnitCopy());
             }
 
@@ -159,9 +160,9 @@ public class DataUnitFile<T extends DataUnit<T>> extends BaseFile
      * These can be quite unsafe.
      *      - access to LOCK object (doable)
      *      - reference to internal elements can be obtained and misused
-     *
+     * <p>
      * These methods should only be called from within a block with acquired lock!!!
-     *
+     * <p>
      * They directly access the data elements, references should not be stored
      */
     public T referenceOrCreateObject_unlocked(String id)
@@ -170,7 +171,7 @@ public class DataUnitFile<T extends DataUnit<T>> extends BaseFile
             mData.put(id, mUnitFactory.createUnit(id));
         }
 
-        mDiskUnsynched = true; //we have to assume this
+        mDiskUnsynced = true; //we have to assume this
         return mData.get(id);
     }
 }
