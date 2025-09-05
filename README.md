@@ -2,6 +2,12 @@
 
 SmsLoc is an application that allows one to query location of friends without the use of mobile network. It uses GPS to retrieve current position and SMS for requests/responses.
 
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+     alt="Get it on F-Droid"
+     height="80">](https://f-droid.org/packages/io.github.wandomium.smsloc/)
+
+Or download the latest APK from the [Releases Section](https://github.com/wandomium/SmsLoc/releases/latest).
+
 # Interface
 The application interface is defined as:
 
@@ -15,10 +21,5 @@ The application interface is defined as:
 - `V_KMH` is the speed in kilometers/hour
 - `ACC_M` is the accuracy reported by the GPS chip in meters
 - `BAT_PCNT` is the battery percentage of the device sending the response
-
-
-
-
-
 
 [^1]: 4 decimal places for lat/lon degrees is accurate to 11.1 meters (+/- 5.55 m ) at the equator. The accuracy of longitude increases further away from the equator, latitude accuracy stays the same.
