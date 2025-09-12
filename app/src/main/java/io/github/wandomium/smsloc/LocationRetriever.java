@@ -29,6 +29,7 @@ import androidx.annotation.NonNull;
 
 import java.util.Timer;
 import java.util.TimerTask; //TODO: TimerTask will never become a demon. keeps alive
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
@@ -42,12 +43,14 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
 
     private CancellationSignal mCancelSignal;
     private Context mCtx; //we need this stored for API29 to unregister calls
+    private ExecutorService mExecutor;
 
     private boolean mCallFinished = false;
 
     private LocationRetriever(LocCb cb, Context ctx) {
         mLocCb = cb;
         mCtx = ctx;
+        mExecutor = Executors.newSingleThreadExecutor();
     }
 
     @FunctionalInterface
@@ -111,7 +114,7 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
                 // but will never return older locations (for example, several minutes old or older).
                 // Checked: consumer is null-ed so we are safe here
                 locMngr.getCurrentLocation(
-                        provider, mCancelSignal, Executors.newSingleThreadExecutor(), this);
+                        provider, mCancelSignal, mExecutor, this);
             }
             mToutTimer.schedule(new ToutTimerTask(), delay_ms);
         }
@@ -120,6 +123,12 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
         }
         catch (SecurityException e) {
             LogFile.getInstance(mCtx).addLogEntry("ERROR: Could not get GPS fix: Missing permissions");
+            _finishCall(null, e.getMessage());
+        }
+        catch (IllegalArgumentException e) {
+            // This one will throw if provider does not exist or is null
+            // It can happen on some ROMs that do not have a network provider (lineageos for ex.(
+            LogFile.getInstance(mCtx).addLogEntry("ERROR: " + e.getMessage());
             _finishCall(null, e.getMessage());
         }
     }
@@ -145,10 +154,13 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
 
         mLocCb.onLocationRcvd(location, msg);
 
+        mExecutor.shutdownNow();
+
         // null all references to avoid dangling
         mCancelSignal = null;
         mCtx   = null;
         mLocCb = null;
+        mExecutor = null;
     }
 
     //using CountdownLatch instead of timer task caused

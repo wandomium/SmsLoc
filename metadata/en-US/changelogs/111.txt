@@ -1,0 +1,1 @@
+[x] Fixed bug #8: Crash at startup on LineageOS equivalent to Android 15
