@@ -17,6 +17,7 @@
 package io.github.wandomium.smsloc;
 
 import android.app.ActivityManager;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -37,6 +38,7 @@ import androidx.viewpager2.widget.ViewPager2;
 import android.os.PowerManager;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -221,6 +223,10 @@ public class MainActivity extends AppCompatActivity
 
     public void openSettings(Intent intent) {
         intent.setData(Uri.parse("package:" + getPackageName()));
-        mSettingsLauncher.launch(intent);
+        try {
+            mSettingsLauncher.launch(intent);
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, "Could not open settings", Toast.LENGTH_LONG).show();
+        }
     }
 }

@@ -30,6 +30,8 @@ import com.google.i18n.phonenumbers.Phonenumber;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
+import java.util.Objects;
+
 import io.github.wandomium.smsloc.data.file.LogFile;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 
@@ -89,13 +91,14 @@ public class SmsUtils
     public static String convertToE164PhoneNumFormat(final String phoneNumStr)
             throws NumberParseException
     {
+        PhoneNumberUtil pnumberUtil = PhoneNumberUtil.getInstance();
         Phonenumber.PhoneNumber phoneNumber;
         try {
             /* Don't even try with SIM country ISO
              * if we pass null, then it will fail if the number does not have a
              * country code included. Which is the safer/easier option in multi-sim support
              */
-            phoneNumber = PhoneNumberUtil.getInstance().parse(phoneNumStr, null);
+            phoneNumber = pnumberUtil.parse(phoneNumStr, null);
         }
         catch (NumberParseException e) {
             if (e.getErrorType() == NumberParseException.ErrorType.INVALID_COUNTRY_CODE) {
@@ -107,10 +110,18 @@ public class SmsUtils
         }
 
         //check if it is a mobile number, because we need to be able to send SMS
-        if (PhoneNumberUtil.getInstance().getNumberType(phoneNumber) != PhoneNumberUtil.PhoneNumberType.MOBILE) {
+        //relax check for US and CA territories
+        final String regionCode = Objects.requireNonNullElse(
+                pnumberUtil.getRegionCodeForNumber(phoneNumber), "");
+        final PhoneNumberUtil.PhoneNumberType requiredType =
+            switch (regionCode) {
+                case "US", "CA" -> PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE;
+                default -> PhoneNumberUtil.PhoneNumberType.MOBILE;
+        };
+        if (pnumberUtil.getNumberType(phoneNumber) != requiredType) {
             throw new NumberParseException(NumberParseException.ErrorType.NOT_A_NUMBER, "Not a mobile number, required for SMS.");
         }
 
-        return PhoneNumberUtil.getInstance().format(phoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
+        return pnumberUtil.format(phoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
     }
 }
