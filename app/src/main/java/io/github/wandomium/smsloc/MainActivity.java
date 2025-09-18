@@ -146,6 +146,7 @@ public class MainActivity extends AppCompatActivity
     {
         super.onResume();
         NotificationHandler.getInstance(this).clearAllNotifications();
+        MainActivity.this.mPermissionMngr.refreshPermissions();
         invalidateOptionsMenu(); //permission or battery settings alert
     }
 
