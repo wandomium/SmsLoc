@@ -1,0 +1,1 @@
+[x] Added more descriptive logging of SEND_SMS errors

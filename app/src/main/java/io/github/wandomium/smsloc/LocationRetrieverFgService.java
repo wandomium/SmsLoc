@@ -130,7 +130,7 @@ public class LocationRetrieverFgService extends Service implements LocationRetri
             this, mAddr, SmsUtils.RESPONSE_CODE + gpsData.toSmsText())) {
 
             mCallStatus = "ERROR"; //this is more pressing than stale location
-            mDetails.add("Missing SEND_SMS permission");
+            mDetails.add("Failed to send SMS (Check Log)");
         }
 
         // This automatically logs

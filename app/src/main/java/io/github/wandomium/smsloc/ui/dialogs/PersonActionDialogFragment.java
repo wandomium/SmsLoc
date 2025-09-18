@@ -90,16 +90,17 @@ public class PersonActionDialogFragment extends DialogFragment
                             try {
                                 _sendSmsLocationQuery();
                             }
-                            catch (SecurityException e) {
-                                LOGDATA.addLogEntry("App needs SEND_SMS permission to request location");
-                                _showErrorDialog("App needs SEND_SMS permission for this action");
+                            catch (Exception e) {
+                                final Context ctx = PersonActionDialogFragment.this.requireContext();
+                                LogFile.getInstance(ctx).addLogEntry("ERROR: " + e.getMessage());
+                                _showErrorDialog(e.getMessage()); //"App needs SEND_SMS permission for this action");
                             }
                             break;
 
                         case REMOVE:
+                            final Context ctx = PersonActionDialogFragment.this.requireContext();
                             LOGDATA.addLogEntry("Removing person: " + displayName);
                             PEOPLEDATA.removeDataEntry(mAddr); //no need to remove day data, we store unlisted people anyway
-                            final Context ctx = PersonActionDialogFragment.this.requireContext();
                             ctx.sendBroadcast(SmsLoc_Intents.generateIntent(ctx, mAddr, SmsLoc_Intents.ACTION_PERSON_REMOVED));
                             break;
 
@@ -132,7 +133,7 @@ public class PersonActionDialogFragment extends DialogFragment
     {
         //TODO-Minor
         //Here we have an option to have a pending intent that checks if SMS was sent
-        SmsUtils.sendSms(getContext(), mAddr, SmsUtils.REQUEST_CODE);
+        SmsUtils.sendSmsAndThrow(getContext(), mAddr, SmsUtils.REQUEST_CODE);
 
         final SmsDayDataFile DAYDATA = SmsDayDataFile.getInstance(getContext());
         synchronized (DAYDATA.getLockObject())

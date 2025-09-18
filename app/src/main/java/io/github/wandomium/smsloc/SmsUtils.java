@@ -53,18 +53,32 @@ public class SmsUtils
             SubscriptionManager.getDefaultVoiceSubscriptionId() : SubscriptionManager.getDefaultSmsSubscriptionId();
     }
 
+    /**
+     *
+     * @throws SecurityException if app is missing SEND_SMS permission
+     * @throws IllegalArgumentException if SIM id is invalid or if default sim is not selected in setting
+     */
     public static boolean sendSms(Context context, final String addr, final String msg)
     {
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PERMISSION_GRANTED) {
-            LogFile.getInstance(context).addLogEntry("ERROR: Could not send SMS, Missing permissions");
+        try {
+            sendSmsAndThrow(context, addr, msg);
+        } catch (Exception e) {
+            LogFile.getInstance(context).addLogEntry("ERROR: " + e.getMessage());
             return false;
+        }
+        return true;
+    }
+    public static void sendSmsAndThrow(Context context, final String addr, final String msg)
+    {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PERMISSION_GRANTED) {
+            throw new SecurityException("Could not send SMS: Missing SEND_SMS permissions");
         }
 
         int subId = SmsLoc_Settings.SMS_SUB_ID.getInt(context);
         if (subId == SmsLoc_Settings.SMS_SUB_ID_DEFAULT) {
             subId = getDefaultSimId();
             if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-                LogFile.getInstance(context).addLogEntry("ERROR: Could not send SMS,  Default SIM not selected in system settings");
+                throw new IllegalArgumentException("Could not send SMS: Use default selected, but default SIM not selected in system settings");
             }
         }
 
@@ -78,13 +92,10 @@ public class SmsUtils
         }
 
         if (smsManager == null) {
-            LogFile.getInstance(context).addLogEntry("ERROR: could not send sms, invalid SIM Id");
-            return false;
+            throw new IllegalArgumentException("Could not send sms: Invalid SIM Id");
         }
 
         smsManager.sendTextMessage(addr, null, msg, null, null);
-
-        return true;
     }
 
     //TODO fina a place for this
