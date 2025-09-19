@@ -16,7 +16,6 @@
  */
 package io.github.wandomium.smsloc.data.unit;
 
-import android.annotation.SuppressLint;
 import android.location.Location;
 
 import androidx.annotation.NonNull;
@@ -97,7 +96,6 @@ public final class GpsData
 
     /* This needs to be kept below 160 characters so it fits
        in one sms */
-    @SuppressLint("DefaultLocale")
     public String toSmsText() {
 
         if (!dataValid()) {
@@ -114,7 +112,7 @@ public final class GpsData
 
                For UTC we round it to seconds
              */
-            return String.format("%.4f,%.4f,%d,%d,%d,%d,%d",
+            return String.format(SmsLoc_Common.LOCALE, "%.4f,%.4f,%d,%d,%d,%d,%d",
                     lat, lon, alt_m, utc / 1000, v_kmh, acc_m, bat_pct);
         }
         catch (NullPointerException e) {return SmsLoc_Common.Consts.GPS_DATA_INVALID_ERR_STR;}

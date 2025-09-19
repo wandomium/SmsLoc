@@ -16,7 +16,6 @@
  */
 package io.github.wandomium.smsloc.ui.dialogs;
 
-import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
@@ -35,6 +34,7 @@ import io.github.wandomium.smsloc.data.file.SmsDayDataFile;
 import io.github.wandomium.smsloc.data.file.PeopleDataFile;
 import io.github.wandomium.smsloc.data.unit.GpsData;
 import io.github.wandomium.smsloc.data.unit.SmsLocData;
+import io.github.wandomium.smsloc.defs.SmsLoc_Common;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.SmsUtils;
 import io.github.wandomium.smsloc.toolbox.Utils;
@@ -146,7 +146,6 @@ public class PersonActionDialogFragment extends DialogFragment
             SmsLoc_Intents.generateIntent(requireContext(), mAddr, SmsLoc_Intents.ACTION_REQUEST_SENT));
     }
 
-    @SuppressLint("DefaultLocale")
     private boolean _navigateTo()
     {
         final GpsData geoData =
@@ -161,12 +160,11 @@ public class PersonActionDialogFragment extends DialogFragment
                 Utils.msToStr(geoData.utc));
 
         startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(
-                String.format("geo:0,0?q=%f,%f(%s)", geoData.lat, geoData.lon, Uri.encode(label)))));
+                String.format(SmsLoc_Common.LOCALE, "geo:0,0?q=%f,%f(%s)", geoData.lat, geoData.lon, Uri.encode(label)))));
 
         return true;
     }
 
-    @SuppressLint("DefaultLocale")
     private String _generateDetailsStr(SmsLocData locData)
     {
         if (locData == null) {
@@ -187,7 +185,7 @@ public class PersonActionDialogFragment extends DialogFragment
                     .append("\n\tDistance from me: ")
                     .append((mMyLocation == null) ?
                             "My Location Fix failed" :
-                            String.format("%.4f km", lastValidLocation.distanceFrom(mMyLocation)/1000.0));
+                            String.format(SmsLoc_Common.LOCALE, "%.4f km", lastValidLocation.distanceFrom(mMyLocation)/1000.0));
         }
 
         //Last response details
@@ -201,9 +199,9 @@ public class PersonActionDialogFragment extends DialogFragment
         if (locData.requestPending()) {
             sb.append("\n\t\tfor: ").append(Utils.timeToNowStr(locData.lastReqTime()));
         }
-        sb.append(String.format(
+        sb.append(String.format(SmsLoc_Common.LOCALE,
                         "\n\tReq. sent/Resp. received: %d/%d", locData.numSentReq(), locData.numResponses()))
-                .append(String.format(
+                .append(String.format(SmsLoc_Common.LOCALE,
                         "\n\tReq. received: %d", locData.numReceivedReq()));
 
         return sb.toString();

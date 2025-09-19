@@ -16,7 +16,6 @@
  */
 package io.github.wandomium.smsloc.ui.main;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
@@ -298,7 +297,6 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
             if (mUniqueList.remove(addr)) { super.remove(addr); }
         }
 
-        @SuppressLint("DefaultLocale")
         @NonNull
         @Override
         public View getView(int position, View convertView, @NonNull ViewGroup parent)
@@ -352,8 +350,8 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                     }
                     text +=
                         (distance == null) ?
-                            String.format("\tDistance: %s", "Get My Loc Failed") //locRetriever.getInvalidLocReasonSimple())
-                          : String.format("\tDistance: %.4f km", distance/1000.0);
+                            String.format(SmsLoc_Common.LOCALE, "\tDistance: %s", "Get My Loc Failed") //locRetriever.getInvalidLocReasonSimple())
+                          : String.format(SmsLoc_Common.LOCALE, "\tDistance: %.4f km", distance/1000.0);
                 }
             }
 

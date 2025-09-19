@@ -16,7 +16,6 @@
  */
 package io.github.wandomium.smsloc.ui.main;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 
@@ -24,6 +23,7 @@ import androidx.annotation.LayoutRes;
 
 import io.github.wandomium.smsloc.data.file.SmsDayDataFile;
 import io.github.wandomium.smsloc.data.unit.GpsData;
+import io.github.wandomium.smsloc.defs.SmsLoc_Common;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.mapdata.AMapTracksDisplay;
 import io.github.wandomium.smsloc.toolbox.ABaseBrdcstRcv;
@@ -96,10 +96,9 @@ public abstract class AMapFragment extends ABaseFragment
         });
     }
 
-    @SuppressLint("DefaultLocale")
     public static String markerDataString(GpsData gpsData)
     {
-        return String.format("%s\nSpeed: %d kmh\nAltitude: %d m\nBattery: %d%%",
+        return String.format(SmsLoc_Common.LOCALE, "%s\nSpeed: %d kmh\nAltitude: %d m\nBattery: %d%%",
                 Utils.msToStr(gpsData.utc), gpsData.v_kmh, gpsData.alt_m, gpsData.bat_pct);
     }
 }

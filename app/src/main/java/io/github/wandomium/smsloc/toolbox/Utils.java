@@ -16,7 +16,6 @@
  */
 package io.github.wandomium.smsloc.toolbox;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -34,6 +33,7 @@ import io.github.wandomium.smsloc.BuildConfig;
 import io.github.wandomium.smsloc.data.file.LogFile;
 import io.github.wandomium.smsloc.data.file.PeopleDataFile;
 import io.github.wandomium.smsloc.data.file.SmsDayDataFile;
+import io.github.wandomium.smsloc.defs.SmsLoc_Common;
 
 public class Utils
 {
@@ -59,7 +59,6 @@ public class Utils
             new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.GERMAN).format(new Date(ms));
     }
 
-    @SuppressLint("DefaultLocale")
     public static String timeToNowHoursStr(long start)
     {
         long dt_s = System.currentTimeMillis() - start;
@@ -73,10 +72,9 @@ public class Utils
         if (days > 0) {
             return "> 1 day";
         }
-        return String.format("%d h %d min", hours, minutes);
+        return String.format(SmsLoc_Common.LOCALE, "%d h %d min", hours, minutes);
     }
 
-    @SuppressLint("DefaultLocale")
     public static String timeToNowStr(long start)
     {
         long dt_s = System.currentTimeMillis() - start;
@@ -87,7 +85,7 @@ public class Utils
         int hours = (int) ((dt_s / (60 * 60)) % 24);
         int days = (int) (dt_s / (60 * 60 * 24));
 
-        return String.format("%d d %d h %d min %d sec", days, hours, minutes, seconds);
+        return String.format(SmsLoc_Common.LOCALE, "%d d %d h %d min %d sec", days, hours, minutes, seconds);
     }
 
     public static int getBatteryPct(Context context)

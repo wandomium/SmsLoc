@@ -16,6 +16,8 @@
  */
 package io.github.wandomium.smsloc.defs;
 
+import java.util.Locale;
+
 import io.github.wandomium.smsloc.BuildConfig;
 
 /**** HOW TO HANDLE REQUEST AND GPS RESPONSE TIME MISMATCH *****
@@ -47,6 +49,8 @@ import io.github.wandomium.smsloc.BuildConfig;
 
 public class SmsLoc_Common
 {
+    // This locale needs to be used to properly format SMS string (. for decimal separator)
+    public static final Locale LOCALE = Locale.US;
     public static class Consts
     {
         public static final String PEOPLE_DATA_FILENAME = BuildConfig.APPLICATION_ID + ".people";

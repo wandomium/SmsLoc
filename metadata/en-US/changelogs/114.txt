@@ -1,0 +1,1 @@
+[x] Fixed bug #12: not setting locale formatted SMS message with ',' in some cases, which lead to wrong parsing of sms text
