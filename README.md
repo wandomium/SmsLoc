@@ -7,7 +7,7 @@
 <br>**or**<br>
 [<img src="https://f-droid.org/badge/get-it-on.png"
     alt="Get it on F-Droid"
-    height="50">](https://f-droid.org/packages/YOUR.APP.ID)
+    height="50">](https://f-droid.org/packages/io.github.wandomium.smsloc)
 
 <br><br>
 
