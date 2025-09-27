@@ -81,7 +81,7 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
      */
     @Override
     public final void accept(Location location) {
-        _finishCall(location, location == null ? "GPS fix OK" : "GPS fix FAIL");
+        _finishCall(location, location != null ? "GPS fix OK" : "GPS fix FAIL");
     }
     /** LocationListener method (API 29 version of accept method)
      * only called on success

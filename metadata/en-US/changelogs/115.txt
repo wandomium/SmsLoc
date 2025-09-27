@@ -1,0 +1,1 @@
+[x] Minor: fixed faulty log output, reporting GPS fix FAIL on success
