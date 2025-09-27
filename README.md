@@ -1,3 +1,22 @@
+<center>
+  
+**Download latest**<br>
+&nbsp;&nbsp;[![GitHub Stable](
+   https://img.shields.io/github/release/wandomium/SmsLoc?label=Stable)](
+   https://github.com/wandomium/SmsLoc/releases/latest)
+<br>**or**<br>
+[<img src="https://f-droid.org/badge/get-it-on.png"
+    alt="Get it on F-Droid"
+    height="50">](https://f-droid.org/packages/YOUR.APP.ID)
+
+<br><br>
+
+[![GPL v3](https://img.shields.io/badge/License-GPLv3-blue?style=flat&logo=gnu&logoColor=white)](./LICENSE)
+![Downloads](https://img.shields.io/github/downloads/wandomium/SmsLoc/total)
+
+---
+</center>
+
 # About
 
 SmsLoc is an application that allows one to query location of friends without the use of mobile network. It uses GPS to retrieve current position and SMS for requests/responses.
