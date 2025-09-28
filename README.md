@@ -19,7 +19,7 @@
 
 # About
 
-SmsLoc is an application that allows one to query location of friends without the use of mobile network. It uses GPS to retrieve current position and SMS for requests/responses.
+SmsLoc is an application that allows one to query location of friends without the use of mobile data. It uses GPS to retrieve current position and SMS for requests/responses.
 
 # Interface
 The application interface is defined as:
