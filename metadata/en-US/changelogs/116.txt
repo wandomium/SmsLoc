@@ -1,0 +1,2 @@
+[x] Relaxed mobile number check to MOBILE_OR_LANDLINE due to too many false negatives (issue #10)
+[x] Now accepts '00' and '+' as country code prefix. Still requires country code! (issue #10)

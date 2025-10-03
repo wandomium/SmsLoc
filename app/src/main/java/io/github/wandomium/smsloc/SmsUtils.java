@@ -99,11 +99,17 @@ public class SmsUtils
     }
 
     //TODO fina a place for this
-    public static String convertToE164PhoneNumFormat(final String phoneNumStr)
+    public static String convertToE164PhoneNumFormat(String phoneNumStr)
             throws NumberParseException
     {
         PhoneNumberUtil pnumberUtil = PhoneNumberUtil.getInstance();
         Phonenumber.PhoneNumber phoneNumber;
+
+        // If country code starts with 00 and not + replace with +
+        if (phoneNumStr.startsWith("00")) {
+            phoneNumStr = "+" + phoneNumStr.substring(2);
+        }
+
         try {
             /* Don't even try with SIM country ISO
              * if we pass null, then it will fail if the number does not have a
@@ -113,23 +119,16 @@ public class SmsUtils
         }
         catch (NumberParseException e) {
             if (e.getErrorType() == NumberParseException.ErrorType.INVALID_COUNTRY_CODE) {
-                throw new NumberParseException(NumberParseException.ErrorType.INVALID_COUNTRY_CODE, "Missing country code");
+                throw new NumberParseException(NumberParseException.ErrorType.INVALID_COUNTRY_CODE, "Missing country code.");
             }
             else {
                 throw e;
             }
         }
 
-        //check if it is a mobile number, because we need to be able to send SMS
-        //relax check for US and CA territories
-        final String regionCode = Objects.requireNonNullElse(
-                pnumberUtil.getRegionCodeForNumber(phoneNumber), "");
-        final PhoneNumberUtil.PhoneNumberType requiredType =
-            switch (regionCode) {
-                case "US", "CA" -> PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE;
-                default -> PhoneNumberUtil.PhoneNumberType.MOBILE;
-        };
-        if (pnumberUtil.getNumberType(phoneNumber) != requiredType) {
+        // Check if it is a mobile number, because we need to be able to send SMS
+        // Relax this check. A lot of issues reported with rejected mobile numbers
+        if (pnumberUtil.getNumberType(phoneNumber) != PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE) {
             throw new NumberParseException(NumberParseException.ErrorType.NOT_A_NUMBER, "Not a mobile number, required for SMS.");
         }
 
