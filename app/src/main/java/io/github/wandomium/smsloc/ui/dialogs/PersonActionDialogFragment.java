@@ -101,7 +101,7 @@ public class PersonActionDialogFragment extends DialogFragment
                             final Context ctx = PersonActionDialogFragment.this.requireContext();
                             LOGDATA.addLogEntry("Removing person: " + displayName);
                             PEOPLEDATA.removeDataEntry(mAddr); //no need to remove day data, we store unlisted people anyway
-                            ctx.sendBroadcast(SmsLoc_Intents.generateIntent(ctx, mAddr, SmsLoc_Intents.ACTION_PERSON_REMOVED));
+                            ctx.sendBroadcast(SmsLoc_Intents.generateIntentWithAddr(ctx, mAddr, SmsLoc_Intents.ACTION_PERSON_REMOVED));
                             break;
 
                         case NAVIGATE:
@@ -143,7 +143,7 @@ public class PersonActionDialogFragment extends DialogFragment
         DAYDATA.writeFileAsync();
 
         requireContext().sendBroadcast(
-            SmsLoc_Intents.generateIntent(requireContext(), mAddr, SmsLoc_Intents.ACTION_REQUEST_SENT));
+            SmsLoc_Intents.generateIntentWithAddr(requireContext(), mAddr, SmsLoc_Intents.ACTION_REQUEST_SENT));
     }
 
     private boolean _navigateTo()

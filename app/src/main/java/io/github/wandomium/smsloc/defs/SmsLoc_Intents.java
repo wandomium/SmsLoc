@@ -46,12 +46,18 @@ public class SmsLoc_Intents
     public static final String ACTION_ERROR              = BuildConfig.APPLICATION_ID + ".intent.error";
 
     //TODO update this
-    public static android.content.Intent generateIntent(Context ctx, final String addr, final String action)
+    public static android.content.Intent generateIntentWithAddr(Context ctx, final String addr, final String action)
     {
         android.content.Intent intent = new android.content.Intent(action);
         intent.setPackage(ctx.getPackageName());
         intent.putExtra(EXTRA_ADDR, addr);
 
+        return intent;
+    }
+    public static android.content.Intent generateSimpleIntent(Context ctx, final String action)
+    {
+        android.content.Intent intent = new android.content.Intent(action);
+        intent.setPackage(ctx.getPackageName());
         return intent;
     }
     public static android.content.Intent generateErrorIntent(Context ctx, final String msg)

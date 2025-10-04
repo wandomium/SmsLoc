@@ -20,6 +20,7 @@ import android.content.Context;
 
 import io.github.wandomium.smsloc.data.base.BaseFile;
 import io.github.wandomium.smsloc.defs.SmsLoc_Common;
+import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.Utils;
 
 import java.io.IOException;
@@ -71,7 +72,7 @@ public class LogFile extends BaseFile
         Files.write(mFilePath, mLogEntries);
     }
 
-    public void addLogEntry(String msg)
+    public void addLogEntry(final String msg)
     {
         synchronized (LOCK)
         {
@@ -80,6 +81,8 @@ public class LogFile extends BaseFile
             mDiskUnsynced = true;
         }
         writeFileAsync();
+
+        mAppContext.sendBroadcast(SmsLoc_Intents.generateSimpleIntent(mAppContext, SmsLoc_Intents.ACTION_LOG_UPDATED));
     }
 
     public final ArrayList<String> readLog()

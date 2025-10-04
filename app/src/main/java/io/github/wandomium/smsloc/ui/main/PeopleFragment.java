@@ -263,7 +263,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
 
         _listAdapter().add(addr);
         LogFile.getInstance(requireContext()).addLogEntry("Added contact: " + name);
-        requireContext().sendBroadcast(SmsLoc_Intents.generateIntent(requireContext(), addr, SmsLoc_Intents.ACTION_NEW_PERSON));
+        requireContext().sendBroadcast(SmsLoc_Intents.generateIntentWithAddr(requireContext(), addr, SmsLoc_Intents.ACTION_NEW_PERSON));
     }
 
 

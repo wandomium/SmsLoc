@@ -133,7 +133,7 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
 
             //we can release the lock before this. If we are not awake, the updates on the
             //app are irrelevant because we are obviously not displaying anything
-            context.sendBroadcast(SmsLoc_Intents.generateIntent(context, addr, broadcastAction));
+            context.sendBroadcast(SmsLoc_Intents.generateIntentWithAddr(context, addr, broadcastAction));
         }
         catch (NumberParseException ignored) {}
         finally {
