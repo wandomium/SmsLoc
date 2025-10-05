@@ -5,4 +5,4 @@ Bugfixes:
 [x] Refresh log list on new log entry (do not wait for tab reload)
 [] Do not keep on repeating 'no GPS provider network found errors' - manifests on LineageOS
 [x] If received SMS does not include country code, SMS response fails (issue #15)
-[x] Removed check if it is a mobile number due to too many false negatives (issue #10). added sms sent feedback as backup
+[x] Removed check if it is a mobile number due to too many false negatives (issue #10). added sms sent feedback as backup   
