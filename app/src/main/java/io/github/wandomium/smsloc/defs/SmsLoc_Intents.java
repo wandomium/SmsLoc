@@ -19,7 +19,10 @@ package io.github.wandomium.smsloc.defs;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
+
+import java.util.ArrayList;
 
 import io.github.wandomium.smsloc.BuildConfig;
 
@@ -43,12 +46,18 @@ public class SmsLoc_Intents
     public static final String ACTION_ERROR              = BuildConfig.APPLICATION_ID + ".intent.error";
 
     //TODO update this
-    public static android.content.Intent generateIntent(Context ctx, final String addr, final String action)
+    public static android.content.Intent generateIntentWithAddr(Context ctx, final String addr, final String action)
     {
         android.content.Intent intent = new android.content.Intent(action);
         intent.setPackage(ctx.getPackageName());
         intent.putExtra(EXTRA_ADDR, addr);
 
+        return intent;
+    }
+    public static android.content.Intent generateSimpleIntent(Context ctx, final String action)
+    {
+        android.content.Intent intent = new android.content.Intent(action);
+        intent.setPackage(ctx.getPackageName());
         return intent;
     }
     public static android.content.Intent generateErrorIntent(Context ctx, final String msg)
@@ -60,40 +69,72 @@ public class SmsLoc_Intents
         return intent;
     }
     /** @noinspection SpellCheckingInspection*/
-    public static Intent generateBgAutostartIntent()
+    public static Intent generateBgAutostartIntent(Context ctx)
     {
-        Intent intent = new Intent();
-        String manufacturer = Build.MANUFACTURER.toLowerCase();
+        ArrayList<ComponentName> candidates = new ArrayList<>();
 
-        switch (manufacturer) {
+        switch (Build.MANUFACTURER.toLowerCase()) {
             case "xiaomi":
-                intent.setComponent(new ComponentName("com.miui.securitycenter",
+            case "redmi":
+            case "poco":
+                candidates.add(new ComponentName("com.miui.securitycenter",
                         "com.miui.permcenter.autostart.AutoStartManagementActivity"));
                 break;
+
             case "oppo":
-                intent.setComponent(new ComponentName("com.coloros.safecenter",
+            case "realme":
+                candidates.add(new ComponentName("com.coloros.safecenter",
                         "com.coloros.safecenter.permission.startup.StartupAppListActivity"));
+                candidates.add(new ComponentName("com.coloros.safecenter",
+                        "com.coloros.safecenter.startupapp.StartupAppListActivity"));
+                candidates.add(new ComponentName("com.oppo.safe",
+                        "com.oppo.safe.permission.startup.StartupAppListActivity"));
                 break;
+
             case "vivo":
-                intent.setComponent(new ComponentName("com.iqoo.secure",
+            case "iqoo":
+                candidates.add(new ComponentName("com.vivo.permissionmanager",
+                        "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"));
+                candidates.add(new ComponentName("com.iqoo.secure",
                         "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity"));
+                candidates.add(new ComponentName("com.iqoo.secure",
+                        "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager"));
                 break;
-            case "letv":
-                intent.setComponent(new ComponentName("com.letv.android.letvsafe",
-                        "com.letv.android.letvsafe.AutobootManageActivity"));
-                break;
-            case "asus":
-                intent.setComponent(new ComponentName("com.asus.mobilemanager",
-                        "com.asus.mobilemanager.entry.FunctionActivity"));
-                break;
+
             case "huawei":
-                intent.setComponent(new ComponentName("com.huawei.systemmanager",
+            case "honor":
+                candidates.add(new ComponentName("com.huawei.systemmanager",
+                        "com.huawei.systemmanager.optimize.process.ProtectActivity"));
+                candidates.add(new ComponentName("com.huawei.systemmanager",
+                        "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity"));
+                candidates.add(new ComponentName("com.huawei.systemmanager",
                         "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"));
                 break;
-            default:
-                intent = null;
+
+            case "letv":
+                candidates.add(new ComponentName("com.letv.android.letvsafe",
+                        "com.letv.android.letvsafe.AutobootManageActivity"));
+                break;
+
+            case "asus":
+                candidates.add(new ComponentName("com.asus.mobilemanager",
+                        "com.asus.mobilemanager.entry.FunctionActivity"));
+                candidates.add(new ComponentName("com.asus.mobilemanager",
+                        "com.asus.mobilemanager.powersaver.PowerSaverSettings"));
                 break;
         }
-        return intent;
+
+        for (ComponentName component : candidates) {
+            Intent intent = new Intent();
+            intent.setComponent(component);
+            // It is possible that a custom ROM was flashed
+            // Example is: LineageOS
+            if (ctx.getPackageManager()
+                    .resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY) != null) {
+                return intent;
+            }
+        }
+
+        return null;
     }
 }

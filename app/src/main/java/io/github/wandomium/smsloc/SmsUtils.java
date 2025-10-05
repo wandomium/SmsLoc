@@ -30,13 +30,15 @@ import com.google.i18n.phonenumbers.Phonenumber;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
-import java.util.Objects;
+import java.util.Locale;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 
 public class SmsUtils
 {
+    private static final String CLASS_TAG = SmsUtils.class.getSimpleName();
+
     public static final String REQUEST_CODE = "Loc?";
     public static final String RESPONSE_CODE = "Loc:";
     public static final int CODE_LEN = 4;
@@ -95,44 +97,49 @@ public class SmsUtils
             throw new IllegalArgumentException("Could not send sms: Invalid SIM Id");
         }
 
-        smsManager.sendTextMessage(addr, null, msg, null, null);
+        smsManager.sendTextMessage(addr, null, msg, SmsSentReceiver.getPendingIntent(context), null);
     }
 
-    //TODO fina a place for this
-    public static String convertToE164PhoneNumFormat(final String phoneNumStr)
+    /**
+     * WHEN ADDING NEW PERSON: Don't even try with SIM country ISO
+     * if we pass null, then it will fail if the number does not have a
+     * country code included. Which is the safer/easier option in multi-sim support
+     * *
+     * WHEN CALLING FROM SmsReceiver: Needs default sim country iso because SMS addr can have none
+     * and it will fail
+     */
+    public static String convertToE164PhoneNumFormat(String phoneNumStr, String defaultRegion)
             throws NumberParseException
     {
-        PhoneNumberUtil pnumberUtil = PhoneNumberUtil.getInstance();
+        PhoneNumberUtil pNumberUtil = PhoneNumberUtil.getInstance();
         Phonenumber.PhoneNumber phoneNumber;
+
+        // If country code starts with 00 and not + replace with +
+        if (phoneNumStr.startsWith("00")) {
+            phoneNumStr = "+" + phoneNumStr.substring(2);
+        }
+
         try {
-            /* Don't even try with SIM country ISO
-             * if we pass null, then it will fail if the number does not have a
-             * country code included. Which is the safer/easier option in multi-sim support
-             */
-            phoneNumber = pnumberUtil.parse(phoneNumStr, null);
+            if (defaultRegion != null) {
+                defaultRegion = defaultRegion.toUpperCase(Locale.ROOT);
+            }
+            phoneNumber = pNumberUtil.parse(phoneNumStr, defaultRegion);
         }
         catch (NumberParseException e) {
             if (e.getErrorType() == NumberParseException.ErrorType.INVALID_COUNTRY_CODE) {
-                throw new NumberParseException(NumberParseException.ErrorType.INVALID_COUNTRY_CODE, "Missing country code");
+                throw new NumberParseException(NumberParseException.ErrorType.INVALID_COUNTRY_CODE, "Missing country code.");
             }
             else {
                 throw e;
             }
         }
 
-        //check if it is a mobile number, because we need to be able to send SMS
-        //relax check for US and CA territories
-        final String regionCode = Objects.requireNonNullElse(
-                pnumberUtil.getRegionCodeForNumber(phoneNumber), "");
-        final PhoneNumberUtil.PhoneNumberType requiredType =
-            switch (regionCode) {
-                case "US", "CA" -> PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE;
-                default -> PhoneNumberUtil.PhoneNumberType.MOBILE;
-        };
-        if (pnumberUtil.getNumberType(phoneNumber) != requiredType) {
-            throw new NumberParseException(NumberParseException.ErrorType.NOT_A_NUMBER, "Not a mobile number, required for SMS.");
-        }
+//        // Check if it is a mobile number, because we need to be able to send SMS
+//        // Relax this check. A lot of issues reported with rejected mobile numbers
+//        if (pNumberUtil.getNumberType(phoneNumber) != PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE) {
+//            throw new NumberParseException(NumberParseException.ErrorType.NOT_A_NUMBER, "Not a mobile number, required for SMS.");
+//        }
 
-        return pnumberUtil.format(phoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
+        return pNumberUtil.format(phoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
     }
 }

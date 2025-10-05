@@ -112,7 +112,7 @@ public class SimpleDialogs {
 
     private static void _showBgAutostartAlert(MainActivity activity)
     {
-        final Intent bgAutostartIntent = SmsLoc_Intents.generateBgAutostartIntent();
+        final Intent bgAutostartIntent = SmsLoc_Intents.generateBgAutostartIntent(activity);
         if (bgAutostartIntent != null) {
             // if it is not null it means we are on a custom rom that we probably know how to handle
             // we open the settings but set flag to ignore so the user is not prompted on every boot

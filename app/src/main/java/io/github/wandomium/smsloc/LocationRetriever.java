@@ -73,7 +73,14 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
      */
     @Deprecated
     public static void getLocationWithNetwork(long delay_ms, @NonNull LocCb cb, @NonNull Context ctx) {
-        new LocationRetriever(cb, ctx)._getLocation(delay_ms, LocationManager.NETWORK_PROVIDER);
+        LocationManager locMngr = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+        if (locMngr.getAllProviders().contains(LocationManager.NETWORK_PROVIDER)
+                && locMngr.isProviderEnabled(LocationManager.NETWORK_PROVIDER) )
+        {
+            // Some ROMs don't have this - LineageOS for example.
+            // Avoid unnecessary reports of missing provider
+            new LocationRetriever(cb, ctx)._getLocation(delay_ms, LocationManager.NETWORK_PROVIDER);
+        }
     }
 
     /** Consumer<Location> method (for API >= 30)

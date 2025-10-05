@@ -16,7 +16,6 @@
  */
 package io.github.wandomium.smsloc;
 
-import android.annotation.SuppressLint;
 import android.app.ForegroundServiceStartNotAllowedException;
 import android.app.Service;
 import android.content.Context;
@@ -53,7 +52,6 @@ public class LocationRetrieverFgService extends Service implements LocationRetri
 
     protected String mAddr;
 
-    @SuppressLint("MissingPermission")
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {

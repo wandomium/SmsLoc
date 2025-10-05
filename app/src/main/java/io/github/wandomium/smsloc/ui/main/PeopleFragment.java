@@ -241,7 +241,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
 
     private void _addPerson(@NonNull final String addrIn, @NonNull String name) throws NumberParseException, IllegalArgumentException
     {
-        final String addr = SmsUtils.convertToE164PhoneNumFormat(addrIn);
+        final String addr = SmsUtils.convertToE164PhoneNumFormat(addrIn, null);
 
         final PeopleDataFile PEOPLEDATA = PeopleDataFile.getInstance(requireContext());
         if (PEOPLEDATA.containsId(addr)) {
@@ -263,7 +263,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
 
         _listAdapter().add(addr);
         LogFile.getInstance(requireContext()).addLogEntry("Added contact: " + name);
-        requireContext().sendBroadcast(SmsLoc_Intents.generateIntent(requireContext(), addr, SmsLoc_Intents.ACTION_NEW_PERSON));
+        requireContext().sendBroadcast(SmsLoc_Intents.generateIntentWithAddr(requireContext(), addr, SmsLoc_Intents.ACTION_NEW_PERSON));
     }
 
 

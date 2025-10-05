@@ -22,6 +22,8 @@ import android.content.Intent;
 import android.os.PowerManager;
 import android.provider.Telephony;
 import android.telephony.SmsMessage;
+import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -61,43 +63,9 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
 
     private int mCurrentLockId;
 
-    public static void releaseWakeLock(int lockId)
-    {
-        synchronized (INSTANCE_LOCK)
-        {
-//            if (sActiveWakeLocks.contains(lockId)) { //not available in API29, equivalent to below call
-            if(sActiveWakeLocks.indexOfKey(lockId) >= 0) {
-                if (sActiveWakeLocks.get(lockId) != null) {
-                    sActiveWakeLocks.get(lockId).release();
-                }
-                sActiveWakeLocks.remove(lockId);
-            }
-            Log.i(CLASS_TAG, "Wake lock released");
-        }
-    }
-
-    private void _releaseCurrentWakeLock()
-    {
-        releaseWakeLock(mCurrentLockId);
-    }
-    private void _acquireWakeLock(Context context)
-    {
-        synchronized (INSTANCE_LOCK)
-        {
-            mCurrentLockId = sNextId;
-            sNextId++;
-
-            final PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-
-            LogFile.getInstance(context).addLogEntry(
-                String.format("Acquire lock. Device idle: %b", powerManager.isDeviceIdleMode()));
-
-            sActiveWakeLocks.put(
-                mCurrentLockId, powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SmsLoc:SmsReceiver"));
-            sActiveWakeLocks.get(mCurrentLockId).setReferenceCounted(false); //only one fo each wake
-            //sActiveWakeLocks.get(sNextId).acquire(SmsLoc_Settings.getGpsTimeoutInMin(context) * Utils.MIN_2_MS + 500);
-            sActiveWakeLocks.get(mCurrentLockId).acquire((long) SmsLoc_Settings.GPS_TIMEOUT.getInt(context) * Utils.MIN_2_MS + 500);
-        }
+    @FunctionalInterface
+    protected interface SmsHandler {
+        String handle(final Context context, final String addr, String... params);
     }
 
     @Override
@@ -115,27 +83,43 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
             if (sms == null) {
                 continue;
             }
-
-            final String smsCode =
-                    sms.getDisplayMessageBody().substring(0, SmsUtils.CODE_LEN);
-            final String geoData =
-                    sms.getDisplayMessageBody().substring(SmsUtils.CODE_LEN);
-            final String addr    =
-                    SmsUtils.convertToE164PhoneNumFormat(sms.getOriginatingAddress());
-
-            String broadcastAction;
-            switch (smsCode) {
-                case SmsUtils.REQUEST_CODE:  broadcastAction = handleRequest(context, addr); break;
-                case SmsUtils.RESPONSE_CODE: broadcastAction = handleResponse(context, addr, geoData); break;
-                default:
-                    continue;
+            // Address is a must
+            String addr = sms.getOriginatingAddress();
+            if (addr == null) {
+                continue; // Not likely: This should only happen on service msgs or some malformed msg
             }
+            // Get msg
+            final String body = sms.getDisplayMessageBody();
+            if (body == null || body.length() < SmsUtils.CODE_LEN) {
+                continue;
+            }
+            // Is it for us?
+            final SmsHandler smsHandler = switch (body.substring(0, SmsUtils.CODE_LEN)) {
+                case SmsUtils.REQUEST_CODE -> mRequestHandler;
+                case SmsUtils.RESPONSE_CODE -> mResponseHandler;
+                default -> null;
+            };
+            if (smsHandler == null) {
+                continue;
+            }
+
+            // We need addr with country code
+            Log.i(CLASS_TAG, _getSmsCountryIso(context, intent));
+            Log.i(CLASS_TAG, addr);
+            addr = SmsUtils.convertToE164PhoneNumFormat(addr,
+                    (addr.startsWith("+") || addr.startsWith("00")) ? null : _getSmsCountryIso(context, intent));
+
+            // Handle message
+            final String broadcastAction = smsHandler.handle(context, addr, body.substring(SmsUtils.CODE_LEN));
 
             //we can release the lock before this. If we are not awake, the updates on the
             //app are irrelevant because we are obviously not displaying anything
-            context.sendBroadcast(SmsLoc_Intents.generateIntent(context, addr, broadcastAction));
+            context.sendBroadcast(SmsLoc_Intents.generateIntentWithAddr(context, addr, broadcastAction));
         }
-        catch (NumberParseException ignored) {}
+        catch (NumberParseException e) {
+            LogFile.getInstance(context).addLogEntry("ERROR - could not handle SMS: " + e.getErrorType());
+            Log.e(CLASS_TAG, e.toString());
+        }
         finally {
             /* Synchronously write, make sure it is stored */
             if (!MainActivity.isCreated()) {
@@ -145,8 +129,10 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
         }
     }
 
-    protected String handleResponse(Context context, final String addr, final String gpsDataStr)
+    protected final SmsHandler mResponseHandler = (context, addr, params) ->
     {
+        final String gpsDataStr = params[0];
+
         final PeopleDataFile PEOPLEDATA = PeopleDataFile.getInstance(context);
         final SmsDayDataFile DAYDATA = SmsDayDataFile.getInstance(context);
 
@@ -178,10 +164,10 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
         _releaseCurrentWakeLock();
         return location.dataValid() ?
             SmsLoc_Intents.ACTION_NEW_LOCATION : SmsLoc_Intents.ACTION_RESPONSE_RCVD;
-    }
+    };
 
-    protected String handleRequest(Context context, final String addr) {
-
+    protected final SmsHandler mRequestHandler = (context, addr, params) ->
+    {
         final PeopleDataFile PEOPLEDATA = PeopleDataFile.getInstance(context);
         final SmsDayDataFile DAYDATA = SmsDayDataFile.getInstance(context);
 
@@ -237,5 +223,69 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
             _releaseCurrentWakeLock();
             return SmsLoc_Intents.ACTION_NOT_WHITELISTED;
         }
+    };
+
+    public static void releaseWakeLock(int lockId)
+    {
+        synchronized (INSTANCE_LOCK)
+        {
+//            if (sActiveWakeLocks.contains(lockId)) { //not available in API29, equivalent to below call
+            if(sActiveWakeLocks.indexOfKey(lockId) >= 0) {
+                if (sActiveWakeLocks.get(lockId) != null) {
+                    sActiveWakeLocks.get(lockId).release();
+                }
+                sActiveWakeLocks.remove(lockId);
+            }
+            Log.i(CLASS_TAG, "Wake lock released");
+        }
+    }
+
+    private void _releaseCurrentWakeLock()
+    {
+        releaseWakeLock(mCurrentLockId);
+    }
+
+    private void _acquireWakeLock(Context context)
+    {
+        synchronized (INSTANCE_LOCK)
+        {
+            mCurrentLockId = sNextId;
+            sNextId++;
+
+            final PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+
+            LogFile.getInstance(context).addLogEntry("Acquire lock. Device idle: " + powerManager.isDeviceIdleMode());
+
+            sActiveWakeLocks.put(
+                    mCurrentLockId, powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SmsLoc:SmsReceiver"));
+            sActiveWakeLocks.get(mCurrentLockId).setReferenceCounted(false); //only one fo each wake
+            //sActiveWakeLocks.get(sNextId).acquire(SmsLoc_Settings.getGpsTimeoutInMin(context) * Utils.MIN_2_MS + 500);
+            sActiveWakeLocks.get(mCurrentLockId).acquire((long) SmsLoc_Settings.GPS_TIMEOUT.getInt(context) * Utils.MIN_2_MS + 500);
+        }
+    }
+
+    /**
+     * SmsMessage.getOriginatingAddress() does not always include country code
+     * We need to be able to handle dual SIM operation
+     * Some extra gymnastics are required to get the country code if we are not the
+     * default messaging app and/or do not have READ_PHONE_STATE permissions
+     */
+    private String _getSmsCountryIso(Context ctx, Intent intent)
+    {
+        TelephonyManager telService = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
+        String smsCountryIso;
+
+        final int subId = intent.getIntExtra(
+                SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX, SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+        if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+            //fallback to default
+            smsCountryIso = telService.getSimCountryIso();
+            LogFile.getInstance(ctx).addLogEntry("Could not determine country code for SMS, using default " + smsCountryIso);
+        }
+        else {
+            smsCountryIso = telService.createForSubscriptionId(subId).getSimCountryIso();
+        }
+
+        return smsCountryIso;
     }
 }
