@@ -18,9 +18,13 @@ package io.github.wandomium.smsloc;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.telephony.SmsManager;
+import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
+import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
 
@@ -30,6 +34,7 @@ import com.google.i18n.phonenumbers.Phonenumber;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
+import java.util.Locale;
 import java.util.Objects;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
@@ -37,6 +42,8 @@ import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 
 public class SmsUtils
 {
+    private static final String CLASS_TAG = SmsUtils.class.getSimpleName();
+
     public static final String REQUEST_CODE = "Loc?";
     public static final String RESPONSE_CODE = "Loc:";
     public static final int CODE_LEN = 4;
@@ -98,8 +105,15 @@ public class SmsUtils
         smsManager.sendTextMessage(addr, null, msg, null, null);
     }
 
-    //TODO fina a place for this
-    public static String convertToE164PhoneNumFormat(String phoneNumStr)
+    /**
+     * WHEN ADDING NEW PERSON: Don't even try with SIM country ISO
+     * if we pass null, then it will fail if the number does not have a
+     * country code included. Which is the safer/easier option in multi-sim support
+     * *
+     * WHEN CALLING FROM SmsReceiver: Needs default sim country iso because SMS addr can have none
+     * and it will fail
+     */
+    public static String convertToE164PhoneNumFormat(String phoneNumStr, String defaultRegion)
             throws NumberParseException
     {
         PhoneNumberUtil pnumberUtil = PhoneNumberUtil.getInstance();
@@ -111,11 +125,10 @@ public class SmsUtils
         }
 
         try {
-            /* Don't even try with SIM country ISO
-             * if we pass null, then it will fail if the number does not have a
-             * country code included. Which is the safer/easier option in multi-sim support
-             */
-            phoneNumber = pnumberUtil.parse(phoneNumStr, null);
+            if (defaultRegion != null) {
+                defaultRegion = defaultRegion.toUpperCase(Locale.ROOT);
+            }
+            phoneNumber = pnumberUtil.parse(phoneNumStr, defaultRegion);
         }
         catch (NumberParseException e) {
             if (e.getErrorType() == NumberParseException.ErrorType.INVALID_COUNTRY_CODE) {
@@ -126,11 +139,11 @@ public class SmsUtils
             }
         }
 
-        // Check if it is a mobile number, because we need to be able to send SMS
-        // Relax this check. A lot of issues reported with rejected mobile numbers
-        if (pnumberUtil.getNumberType(phoneNumber) != PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE) {
-            throw new NumberParseException(NumberParseException.ErrorType.NOT_A_NUMBER, "Not a mobile number, required for SMS.");
-        }
+//        // Check if it is a mobile number, because we need to be able to send SMS
+//        // Relax this check. A lot of issues reported with rejected mobile numbers
+//        if (pnumberUtil.getNumberType(phoneNumber) != PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE) {
+//            throw new NumberParseException(NumberParseException.ErrorType.NOT_A_NUMBER, "Not a mobile number, required for SMS.");
+//        }
 
         return pnumberUtil.format(phoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
     }

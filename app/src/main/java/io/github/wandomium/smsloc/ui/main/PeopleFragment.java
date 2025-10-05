@@ -241,7 +241,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
 
     private void _addPerson(@NonNull final String addrIn, @NonNull String name) throws NumberParseException, IllegalArgumentException
     {
-        final String addr = SmsUtils.convertToE164PhoneNumFormat(addrIn);
+        final String addr = SmsUtils.convertToE164PhoneNumFormat(addrIn, null);
 
         final PeopleDataFile PEOPLEDATA = PeopleDataFile.getInstance(requireContext());
         if (PEOPLEDATA.containsId(addr)) {

@@ -5,3 +5,4 @@
 Bugfixes:
 [x] Refresh log list on new log entry (do not wait for tab reload)
 [] Do not keep on repeating 'no GPS provider network found errors' - manifests on LineageOS
+[X] If received SMS does not include country code, SMS response fails (issue #15)

@@ -53,7 +53,6 @@ public class LocationRetrieverFgService extends Service implements LocationRetri
 
     protected String mAddr;
 
-    @SuppressLint("MissingPermission")
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
