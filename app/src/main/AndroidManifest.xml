@@ -91,6 +91,7 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
+        <receiver android:name="io.github.wandomium.smsloc.SmsSentReceiver" />
         <receiver
             android:name="io.github.wandomium.smsloc.BootReceiver"
             android:enabled="true"

@@ -102,7 +102,7 @@ public class SmsUtils
             throw new IllegalArgumentException("Could not send sms: Invalid SIM Id");
         }
 
-        smsManager.sendTextMessage(addr, null, msg, null, null);
+        smsManager.sendTextMessage(addr, null, msg, SmsSentReceiver.getPendingIntent(context), null);
     }
 
     /**
