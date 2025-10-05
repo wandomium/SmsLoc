@@ -19,7 +19,6 @@ package io.github.wandomium.smsloc;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Telephony;
 import android.telephony.SmsMessage;
@@ -130,7 +129,7 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
         }
     }
 
-    protected SmsHandler mResponseHandler = (context, addr, params) ->
+    protected final SmsHandler mResponseHandler = (context, addr, params) ->
     {
         final String gpsDataStr = params[0];
 
@@ -167,7 +166,7 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
             SmsLoc_Intents.ACTION_NEW_LOCATION : SmsLoc_Intents.ACTION_RESPONSE_RCVD;
     };
 
-    protected SmsHandler mRequestHandler = (context, addr, params) ->
+    protected final SmsHandler mRequestHandler = (context, addr, params) ->
     {
         final PeopleDataFile PEOPLEDATA = PeopleDataFile.getInstance(context);
         final SmsDayDataFile DAYDATA = SmsDayDataFile.getInstance(context);
@@ -274,7 +273,7 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
     private String _getSmsCountryIso(Context ctx, Intent intent)
     {
         TelephonyManager telService = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
-        String smsCountryIso = null;
+        String smsCountryIso;
 
         final int subId = intent.getIntExtra(
                 SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX, SubscriptionManager.INVALID_SUBSCRIPTION_ID);

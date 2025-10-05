@@ -1,4 +1,4 @@
-<center>
+<div style="text-align: center;">
   
 **Download latest**<br>
 &nbsp;&nbsp;[![GitHub Stable](
@@ -15,7 +15,7 @@
 ![Downloads](https://img.shields.io/github/downloads/wandomium/SmsLoc/total)
 
 ---
-</center>
+</div>
 
 # About
 

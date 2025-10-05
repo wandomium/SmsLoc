@@ -16,7 +16,6 @@
  */
 package io.github.wandomium.smsloc;
 
-import android.annotation.SuppressLint;
 import android.app.ForegroundServiceStartNotAllowedException;
 import android.app.Service;
 import android.content.Context;
