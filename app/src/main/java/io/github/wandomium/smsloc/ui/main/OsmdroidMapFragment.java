@@ -16,11 +16,15 @@
  */
 package io.github.wandomium.smsloc.ui.main;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.location.Location;
 import android.os.Bundle;
+import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
+import android.view.ViewParent;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
@@ -125,6 +129,7 @@ public class OsmdroidMapFragment extends AMapFragment
 
                 /* Configure map */
                 _configureMapView();
+                _configureMapScroll();
             });
 
             executor.shutdownNow();
@@ -232,6 +237,27 @@ public class OsmdroidMapFragment extends AMapFragment
             mMapView.getOverlays().add(overlay);
             myLocationOverlayIdx = mMapView.getOverlays().size() - 1;
         }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void _configureMapScroll() {
+        mMapView.setOnTouchListener((v, event) -> {
+            if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
+                VelocityTracker velocityTracker = VelocityTracker.obtain();
+                velocityTracker.addMovement(event);
+                velocityTracker.computeCurrentVelocity(1000); // pixels/sec
+
+                if (Math.abs(velocityTracker.getXVelocity()) < 100) {
+                    ViewParent parent = v.getParent();
+                    while (parent != null) {
+                        parent.requestDisallowInterceptTouchEvent(true);
+                        parent = parent.getParent();
+                    }
+                }
+                velocityTracker.recycle();
+            }
+            return false;
+        });
     }
 
     @Override
