@@ -39,7 +39,6 @@ public class SmsLoc_Intents
     public static final String ACTION_DAY_DATA_CLR       = BuildConfig.APPLICATION_ID + ".intent.day_data_clr";
     public static final String ACTION_NEW_PERSON         = BuildConfig.APPLICATION_ID + ".intent.new_person";
     public static final String ACTION_PERSON_REMOVED     = BuildConfig.APPLICATION_ID + ".intent.person_removed";
-    public static final String ACTION_PERSON_UPDATE      = BuildConfig.APPLICATION_ID + ".intent.person_update";
     public static final String ACTION_MY_LOCATION_UPDATE = BuildConfig.APPLICATION_ID + ".intent.my_location_update";
     public static final String ACTION_NOT_WHITELISTED    = BuildConfig.APPLICATION_ID + ".intent.not_whitelisted";
     public static final String ACTION_LOG_UPDATED        = BuildConfig.APPLICATION_ID + ".intent.log_updated";
