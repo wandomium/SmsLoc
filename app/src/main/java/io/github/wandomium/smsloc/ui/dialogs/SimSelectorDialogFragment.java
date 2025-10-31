@@ -103,6 +103,12 @@ public class SimSelectorDialogFragment extends DialogFragment
         return dialog;
     }
 
+    @Override
+    public void onDismiss(@NonNull DialogInterface dialog) {
+        super.onDismiss(dialog);
+        requireActivity().invalidateOptionsMenu();
+    }
+
     public void showNoDefaultSelectionAlert(final int selected, final int defopt)
     {
         if (selected == SmsLoc_Settings.SMS_SUB_ID_DEFAULT && defopt == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {

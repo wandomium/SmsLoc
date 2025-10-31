@@ -6,6 +6,7 @@
     <string name="bg_autostart_alert_title">Background Autostart</string>
     <string name="bg_autostart_alert_msg">On some phones, background autostart needs to be enabled in System Settings. Applicable on, for ex., Xiaomi MIUI (tested)</string>
     <string name="battery_saver_alert_msg">Can interfere with getting a GPS fix and running app in background.\nDisable in App Settings under Battery or BatterySaver</string>
+    <string name="invalid_sim_config_msg">App is configured to use system default SIM for calls but no default is selected in system settings\n\nSelect which SIM to use, or setup default SIM in System Settings.</string>
     <!-- APPLICATION SETTINGS -->
     <!-- PERMISSION REASONS -->
     <!-- TODO: Remove or change this placeholder text -->
@@ -15,7 +16,7 @@
     <!-- GUI ELEMENTS -->
     <string name="btn_show_unauthorized_req">Show unauthorized requests</string>
     <string name="btn_clear_log">Clear Log</string>
-    <string name="checkbox_whitelist">Allow requests from anyone</string>
+    <string name="checkbox_whitelist">Allow requests from unlisted</string>
     <string name="gps_fix_timeout">GPS Fix Timeout</string>
     <string name="troubleshooting">Troubleshooting</string>
     <string name="select_sim_card">Select SIM card</string>

@@ -36,6 +36,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
 import android.os.PowerManager;
+import android.telephony.SubscriptionManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -44,6 +45,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 import io.github.wandomium.smsloc.toolbox.NotificationHandler;
 import io.github.wandomium.smsloc.toolbox.Utils;
 import io.github.wandomium.smsloc.ui.dialogs.SimSelectorDialogFragment;
@@ -131,6 +133,16 @@ public class MainActivity extends AppCompatActivity
     public String getMissingPermissionStr() {
         return mPermissionMngr.getMissingString();
     }
+    public boolean simSelectError() {
+        int subId = SmsLoc_Settings.SMS_SUB_ID.getInt(this);
+        if (subId == SmsLoc_Settings.SMS_SUB_ID_DEFAULT) {
+            subId = SmsUtils.getDefaultSimId();
+            return subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+        }
+        else {
+            return false;
+        }
+    }
 
     public boolean permissionCheckActive() { return mPermissionMngr.isBusy(); }
 
@@ -189,7 +201,7 @@ public class MainActivity extends AppCompatActivity
         getMenuInflater().inflate(R.menu.menu, menu);
 
         final boolean invalidSettings =
-            batteryOptimizationOn() || permissionsMissing() || isBackgroundRestricted() ||
+            batteryOptimizationOn() || permissionsMissing() || isBackgroundRestricted() || simSelectError() ||
             NotificationHandler.getInstance(MainActivity.this).areNotificationsBlocked();
 
         MenuItem alertItem = menu.findItem(R.id.per_warning);

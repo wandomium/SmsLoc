@@ -45,10 +45,13 @@ import io.github.wandomium.smsloc.toolbox.NotificationHandler;
 
 public class SimpleDialogs {
     public enum Type {Troubleshooting, Alerts, GpsTimeout, InvalidSettings, BatteryOptimization,
-        Notifications, Permissions, BgAutostart, About}
+        Notifications, Permissions, BgAutostart, About, SimSelect}
 
     public static void createAndShow(MainActivity activity, Type which) {
         switch (which) {
+            case SimSelect:
+                _showSimSelectAlert(activity);
+                return;
             case BgAutostart:
                 _showBgAutostartAlert(activity);
                 return;
@@ -110,6 +113,15 @@ public class SimpleDialogs {
             .show();
     }
 
+    private static void _showSimSelectAlert(MainActivity activity)
+    {
+        new AlertDialog.Builder(activity)
+            .setTitle("Invalid SIM configuration")
+            .setMessage(activity.getString(R.string.invalid_sim_config_msg))
+            .setPositiveButton("Ok", null)
+            .show();
+    }
+
     private static void _showBgAutostartAlert(MainActivity activity)
     {
         final Intent bgAutostartIntent = SmsLoc_Intents.generateBgAutostartIntent(activity);
@@ -163,6 +175,10 @@ public class SimpleDialogs {
         if (activity.permissionsMissing()) {
             itemsTypes.add(Type.Permissions);
             itemsStrs.add("Missing permissions");
+        }
+        if (activity.simSelectError()) {
+            itemsTypes.add(Type.SimSelect);
+            itemsStrs.add("Invalid SIM settings");
         }
 
         builder.setItems(itemsStrs.toArray(new String[0]), (dialog, which) -> SimpleDialogs.createAndShow(activity, itemsTypes.get(which))).show();

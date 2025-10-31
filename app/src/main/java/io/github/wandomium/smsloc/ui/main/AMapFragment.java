@@ -76,15 +76,13 @@ public abstract class AMapFragment extends ABaseFragment
                 switch (intent.getAction()) {
                     case SmsLoc_Intents.ACTION_NEW_LOCATION:
                         final String addr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);
-                        //responses from people not on the list are still stored. This will not be null
+                        // responses from people not on the list are still stored. This will not be null
                         final GpsData location = SmsDayDataFile.getInstance(context).getDataEntry(addr).getLastValidLocation();
-                        try {
-                            mParent.get().mTracksDisplay.addLocation(addr, location);
-                            mParent.get().mLastUpdateLoc = location;
-                            mParent.get()._zoomToLastPoint();
-                            //should be last so we don't remove if not needed
-                            mParent.get()._clearPopups();
-                        } catch (InvalidKeyException ignored) {} //responses that are not in the list
+                        mParent.get().mTracksDisplay.addLocation(addr, location);
+                        mParent.get().mLastUpdateLoc = location;
+                        mParent.get()._zoomToLastPoint();
+                        //should be last so we don't remove if not needed
+                        mParent.get()._clearPopups();
                         break;
                     case SmsLoc_Intents.ACTION_DAY_DATA_CLR:
                         //TODO: maybe apply some default bounds
