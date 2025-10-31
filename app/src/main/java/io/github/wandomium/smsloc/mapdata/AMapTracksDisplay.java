@@ -54,16 +54,14 @@ public abstract class AMapTracksDisplay
             if (!data.get(addr).hasLocationData()) {
                 continue;
             }
-            try {
-                IMapTrack track = _getOrCreateTrack(addr);
-                //noinspection DataFlowIssue - this cannot return null
-                for (GpsData loc : data.get(addr).getLocationData()) {
-                    track.updateData(loc);
-                }
-            } catch (InvalidKeyException ignored) {}
+            IMapTrack track = _getOrCreateTrack(addr);
+            //noinspection DataFlowIssue - this cannot return null
+            for (GpsData loc : data.get(addr).getLocationData()) {
+                track.updateData(loc);
+            }
         }
     }
-    public void addLocation(String addr, GpsData location) throws InvalidKeyException
+    public void addLocation(String addr, GpsData location)
     {
         _getOrCreateTrack(addr).updateData(location);
     }
@@ -76,14 +74,15 @@ public abstract class AMapTracksDisplay
 
 
 /***** Internal *****/
-    protected IMapTrack _getOrCreateTrack(String addr) throws InvalidKeyException
+    protected IMapTrack _getOrCreateTrack(String addr)
     {
         if (mTracks.containsKey(addr)) {
             return mTracks.get(addr);
         }
-        final PersonData person = PEOPLEDATA.getDataEntry(addr);
+        PersonData person = PEOPLEDATA.getDataEntry(addr);
         if (person == null) {
-            throw new InvalidKeyException("Got loc from unlisted");
+            // Create a default person if it is not in the list
+            person = new PersonData(addr, null);
         }
 
         IMapTrack track = _createTrack(person);
