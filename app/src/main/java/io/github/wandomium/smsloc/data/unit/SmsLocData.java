@@ -103,6 +103,7 @@ public final class SmsLocData implements Cloneable, DataUnit<SmsLocData>
     public boolean hasLocationData() {
         return gpsDataPoints.length != 0;
     }
+    @NonNull
     public GpsData[] getLocationData()  {
         //array contents themselves are immutable which is all we care about really
         return gpsDataPoints.clone();

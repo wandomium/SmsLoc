@@ -23,13 +23,12 @@ import androidx.annotation.LayoutRes;
 
 import io.github.wandomium.smsloc.data.file.SmsDayDataFile;
 import io.github.wandomium.smsloc.data.unit.GpsData;
+import io.github.wandomium.smsloc.data.unit.SmsLocData;
 import io.github.wandomium.smsloc.defs.SmsLoc_Common;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.mapdata.AMapTracksDisplay;
 import io.github.wandomium.smsloc.toolbox.ABaseBrdcstRcv;
 import io.github.wandomium.smsloc.toolbox.Utils;
-
-import java.security.InvalidKeyException;
 
 public abstract class AMapFragment extends ABaseFragment
 {
@@ -48,7 +47,7 @@ public abstract class AMapFragment extends ABaseFragment
     protected void _createBroadcastReceivers() {
         /* Handle people data updates */
         mReceiverList.add(new ABaseBrdcstRcv<>(AMapFragment.this,
-                new String[]{SmsLoc_Intents.ACTION_PERSON_UPDATE, SmsLoc_Intents.ACTION_PERSON_REMOVED}) {
+                new String[]{SmsLoc_Intents.ACTION_PERSON_REMOVED, SmsLoc_Intents.ACTION_NEW_PERSON}) {
             @Override
             public void onReceive(Context context, Intent intent) {
                 final String action = intent.getAction();
@@ -57,9 +56,16 @@ public abstract class AMapFragment extends ABaseFragment
                     return;
                 }
                 switch (action) {
-                    case SmsLoc_Intents.ACTION_PERSON_REMOVED -> mParent.get().mTracksDisplay.removeTrack(addr);
-                    //TODO: placeholder - support for initials or color change, not implemented anywhere
-                    case SmsLoc_Intents.ACTION_PERSON_UPDATE -> {}
+//                    case SmsLoc_Intents.ACTION_PERSON_REMOVED -> mParent.get().mTracksDisplay.removeTrack(addr);
+                    // We have this person's loc data but it was previously unlisted, repaint
+                    // Option b: person was removed from list but we still have location data for today
+                    case SmsLoc_Intents.ACTION_NEW_PERSON, SmsLoc_Intents.ACTION_PERSON_REMOVED -> {
+                        mParent.get().mTracksDisplay.removeTrack(addr);
+                        final SmsLocData locData = SmsDayDataFile.getInstance(context).getDataEntry(addr);
+                        if (locData != null) {
+                            mParent.get().mTracksDisplay.addTrack(addr, locData);
+                        }
+                    }
                 }
             }
         });

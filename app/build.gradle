@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace "io.github.wandomium.smsloc"
-    compileSdk 35
+    compileSdk = 35
 
     defaultConfig {
         applicationId "io.github.wandomium.smsloc"
@@ -60,11 +60,11 @@ dependencies {
     implementation 'androidx.navigation:navigation-ui:2.9.5'
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.2.0-beta01"
     implementation "androidx.lifecycle:lifecycle-extensions:2.2.0"
-    implementation 'androidx.work:work-runtime:2.10.5'
+    implementation 'androidx.work:work-runtime:2.11.0'
     
     implementation 'org.osmdroid:osmdroid-android:6.1.20'
 
-    implementation 'com.googlecode.libphonenumber:libphonenumber:9.0.15'
+    implementation 'com.googlecode.libphonenumber:libphonenumber:9.0.17'
     implementation 'com.google.android.material:material:1.13.0'
     implementation 'com.google.code.gson:gson:2.13.2'
 

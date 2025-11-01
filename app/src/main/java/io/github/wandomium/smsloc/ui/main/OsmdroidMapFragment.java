@@ -28,6 +28,7 @@ import android.view.ViewParent;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -63,6 +64,8 @@ public class OsmdroidMapFragment extends AMapFragment
     private MapView mMapView;
     private int myLocationOverlayIdx;
     private final double mDefaultZoom = 12.0;
+
+    private boolean mMapScrollModeOn = false;
 
     public OsmdroidMapFragment() { super(R.layout.fragment_osmdroid);}
     public static OsmdroidMapFragment newInstance(final int position) {
@@ -241,22 +244,36 @@ public class OsmdroidMapFragment extends AMapFragment
 
     @SuppressLint("ClickableViewAccessibility")
     private void _configureMapScroll() {
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                mMapScrollModeOn = false;
+            }
+        });
+
         mMapView.setOnTouchListener((v, event) -> {
-            if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
+            if (!mMapScrollModeOn && event.getActionMasked() == MotionEvent.ACTION_MOVE) {
                 VelocityTracker velocityTracker = VelocityTracker.obtain();
                 velocityTracker.addMovement(event);
-                velocityTracker.computeCurrentVelocity(1000); // pixels/sec
-
-                if (Math.abs(velocityTracker.getXVelocity()) < 100) {
-                    ViewParent parent = v.getParent();
-                    while (parent != null) {
-                        parent.requestDisallowInterceptTouchEvent(true);
-                        parent = parent.getParent();
-                    }
+                velocityTracker.computeCurrentVelocity(1000); // px/sec
+                final float vx = velocityTracker.getXVelocity();
+                // zeros are flukes
+                if (vx != 0.0f && Math.abs(vx) < 100f) {
+                    mMapScrollModeOn = true;
                 }
                 velocityTracker.recycle();
             }
-            return false;
+
+            if (mMapScrollModeOn) {
+                // avoid keeping direct reference to viewPager
+                ViewParent parent = v.getParent();
+                while (parent != null) {
+                    parent.requestDisallowInterceptTouchEvent(true);
+                    parent = parent.getParent();
+                }
+            }
+
+            return false; // let MapView handle zoom/pan normally
         });
     }
 

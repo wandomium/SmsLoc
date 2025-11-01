@@ -93,15 +93,6 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
         </receiver>
         <receiver android:name="io.github.wandomium.smsloc.SmsSentReceiver" />
         <receiver
-            android:name="io.github.wandomium.smsloc.BootReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE" />
-            </intent-filter>
-        </receiver>
-        <receiver
             android:name="io.github.wandomium.smsloc.toolbox.NotificationHandler$NotGroupClearedRcv"
             android:exported="false">
             <intent-filter>

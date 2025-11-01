@@ -16,13 +16,15 @@
  */
 package io.github.wandomium.smsloc.mapdata;
 
+import androidx.annotation.NonNull;
+
 import io.github.wandomium.smsloc.data.file.PeopleDataFile;
 import io.github.wandomium.smsloc.data.unit.GpsData;
 import io.github.wandomium.smsloc.data.unit.PersonData;
 import io.github.wandomium.smsloc.data.unit.SmsLocData;
 
-import java.security.InvalidKeyException;
 import java.util.HashMap;
+import java.util.Objects;
 
 public abstract class AMapTracksDisplay
 {
@@ -50,15 +52,7 @@ public abstract class AMapTracksDisplay
     public void initFromDayData(HashMap<String, SmsLocData> data)
     {
         for (String addr : data.keySet()) {
-            //noinspection DataFlowIssue - this cannot return null
-            if (!data.get(addr).hasLocationData()) {
-                continue;
-            }
-            IMapTrack track = _getOrCreateTrack(addr);
-            //noinspection DataFlowIssue - this cannot return null
-            for (GpsData loc : data.get(addr).getLocationData()) {
-                track.updateData(loc);
-            }
+            addTrack(addr, Objects.requireNonNull(data.get(addr)));
         }
     }
     public void addLocation(String addr, GpsData location)
@@ -71,9 +65,18 @@ public abstract class AMapTracksDisplay
     public IMapTrack removeTrack(String addr) {
         return mTracks.remove(addr);
     }
+    public void addTrack(@NonNull final String addr, @NonNull final SmsLocData locData)
+    {
+        if (locData.hasLocationData()) {
+            IMapTrack track = _getOrCreateTrack(addr);
+            for (GpsData loc : locData.getLocationData()) {
+                track.updateData(loc);
+            }
+        }
+    }
 
 
-/***** Internal *****/
+    /***** Internal *****/
     protected IMapTrack _getOrCreateTrack(String addr)
     {
         if (mTracks.containsKey(addr)) {

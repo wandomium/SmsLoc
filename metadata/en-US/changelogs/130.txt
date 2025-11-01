@@ -3,3 +3,5 @@ Bugs:
 Features:
 [x] #18: Warn user when default system sim is selected in app but not configured in system settings
 [x] #19: Display received location even if user is not in the list
+Other:
+[x] Removed unnecessary boot receiver
