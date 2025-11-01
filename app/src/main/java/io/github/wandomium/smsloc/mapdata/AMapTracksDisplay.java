@@ -74,10 +74,9 @@ public abstract class AMapTracksDisplay
             }
         }
     }
-    public boolean hasTrack(@NonNull final String addr) { return mTracks.get(addr) != null;}
 
 
-/***** Internal *****/
+    /***** Internal *****/
     protected IMapTrack _getOrCreateTrack(String addr)
     {
         if (mTracks.containsKey(addr)) {

@@ -37,8 +37,6 @@ import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 
 public class SmsUtils
 {
-    private static final String CLASS_TAG = SmsUtils.class.getSimpleName();
-
     public static final String REQUEST_CODE = "Loc?";
     public static final String RESPONSE_CODE = "Loc:";
     public static final int CODE_LEN = 4;
@@ -134,11 +132,8 @@ public class SmsUtils
             }
         }
 
-//        // Check if it is a mobile number, because we need to be able to send SMS
-//        // Relax this check. A lot of issues reported with rejected mobile numbers
-//        if (pNumberUtil.getNumberType(phoneNumber) != PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE) {
-//            throw new NumberParseException(NumberParseException.ErrorType.NOT_A_NUMBER, "Not a mobile number, required for SMS.");
-//        }
+        // Check if it is a mobile number, because we need to be able to send SMS
+        // Relax this check. A lot of issues reported with rejected mobile numbers. Use sentIntent to monitor success
 
         return pNumberUtil.format(phoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
     }

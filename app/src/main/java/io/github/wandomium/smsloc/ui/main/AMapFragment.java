@@ -30,8 +30,6 @@ import io.github.wandomium.smsloc.mapdata.AMapTracksDisplay;
 import io.github.wandomium.smsloc.toolbox.ABaseBrdcstRcv;
 import io.github.wandomium.smsloc.toolbox.Utils;
 
-import java.security.InvalidKeyException;
-
 public abstract class AMapFragment extends ABaseFragment
 {
     protected AMapTracksDisplay mTracksDisplay;
