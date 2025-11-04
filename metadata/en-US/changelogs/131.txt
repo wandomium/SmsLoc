@@ -1,0 +1,1 @@
+[x] #23 Downgrade AGP to 8.11.0 to support F-Droid builds
