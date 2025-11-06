@@ -1,4 +1,4 @@
-SmsLoc is an application that queries the location of contacts without the use of mobile network. It uses GPS to retrieve current position and SMS for requests/responses.
+SmsLoc is an application that queries the location of contacts without the use of mobile data. It uses GPS to retrieve current position and SMS for requests/responses.
 
 SMS request format: `Loc?`
 SMS response format: `Loc:LAT,LON,ASL,UTC_S,V_KMH,ACC_M,BAT_PCT`, where:
