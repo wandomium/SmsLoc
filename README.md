@@ -12,7 +12,7 @@
 <br><br>
 
 [![GPL v3](https://img.shields.io/badge/License-GPLv3-blue?style=flat&logo=gnu&logoColor=white)](./LICENSE)
-![Downloads](https://img.shields.io/github/downloads/wandomium/SmsLoc/total)
+![Downloads](https://img.shields.io/github/downloads/wandomium/SmsLoc/total?cacheSeconds=14400)
 
 ---
 </div>
