@@ -29,6 +29,8 @@ import io.github.wandomium.smsloc.BuildConfig;
 public class SmsLoc_Intents
 {
     public static final String EXTRA_ADDR         = "Addr";
+    public static final String EXTRA_MSG          = "Msg";
+    public static final String EXTRA_RETRY_CNT    = "RtryCnt";
     public static final String EXTRA_DEFOPT       = "Extra";
     public static final String EXTRA_WAKE_LOCK_ID = "WakeLockId";
 

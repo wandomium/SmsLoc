@@ -1,0 +1,8 @@
+[] Check DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+
+Bugfixes:
+[] Fix debug print in startForeground (#26)
+
+Enhancements:
+[] Retry SMS send on error automatically for responses (#29)
+[] Treat anything but 'Activity.RESULT_OK' as SMS sent error (#27)

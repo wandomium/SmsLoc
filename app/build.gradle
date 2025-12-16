@@ -25,7 +25,7 @@ android {
             buildConfigField "boolean", "STRICT_MODE_ENABLE", "false"
         }
         debug {
-            buildConfigField "boolean", "STRICT_MODE_ENABLE", "true"
+            buildConfigField "boolean", "STRICT_MODE_ENABLE", "false"
         }
     }
     compileOptions {

@@ -17,12 +17,24 @@
 package io.github.wandomium.smsloc;
 
 import android.Manifest;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Build;
 import android.telephony.SmsManager;
 import android.telephony.SubscriptionManager;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+import androidx.work.Worker;
+import androidx.work.WorkerParameters;
 
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
@@ -31,9 +43,12 @@ import com.google.i18n.phonenumbers.Phonenumber;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
+import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
+import io.github.wandomium.smsloc.toolbox.NotificationHandler;
 
 public class SmsUtils
 {
@@ -53,11 +68,6 @@ public class SmsUtils
             SubscriptionManager.getDefaultVoiceSubscriptionId() : SubscriptionManager.getDefaultSmsSubscriptionId();
     }
 
-    /**
-     *
-     * @throws SecurityException if app is missing SEND_SMS permission
-     * @throws IllegalArgumentException if SIM id is invalid or if default sim is not selected in setting
-     */
     public static boolean sendSms(Context context, final String addr, final String msg)
     {
         try {
@@ -68,34 +78,60 @@ public class SmsUtils
         }
         return true;
     }
-    public static void sendSmsAndThrow(Context context, final String addr, final String msg)
-    {
+    public static void sendSmsAndThrow(Context context, final String addr, final String msg) {
+        sendSmsAndThrow(context, addr, msg, 0);
+    }
+    /**
+     * @throws SecurityException if app is missing SEND_SMS permission
+     * @throws IllegalArgumentException if SIM id is invalid or if default sim is not selected in setting
+     */
+    public static void sendSmsAndThrow(Context context, final String addr, final String msg, final int retryCnt) {
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PERMISSION_GRANTED) {
             throw new SecurityException("Could not send SMS: Missing SEND_SMS permissions");
         }
 
-        int subId = SmsLoc_Settings.SMS_SUB_ID.getInt(context);
-        if (subId == SmsLoc_Settings.SMS_SUB_ID_DEFAULT) {
-            subId = getDefaultSimId();
-            if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-                throw new IllegalArgumentException("Could not send SMS: Use default selected, but default SIM not selected in system settings");
+        _getSmsManager(context).sendTextMessage(addr, null, msg,
+                SmsSentReceiver.getPendingIntent(context, addr, msg, retryCnt), null);
+    }
+
+    public static void scheduleSmsSend(Context context, final String addr, final String msg, final int retryCnt) {
+        Data inputData = new Data.Builder()
+                .putString(SmsLoc_Intents.EXTRA_ADDR, addr)
+                .putString(SmsLoc_Intents.EXTRA_MSG, msg)
+                .putInt(SmsLoc_Intents.EXTRA_RETRY_CNT, retryCnt)
+                .build();
+
+        OneTimeWorkRequest smsWorkRequest = new OneTimeWorkRequest.Builder(SmsSendWorker.class)
+                .setInputData(inputData)
+                .setInitialDelay(SmsSentReceiver.RETRY_TO_M, TimeUnit.MINUTES)
+                .build();
+
+        WorkManager.getInstance(context).enqueue(smsWorkRequest);
+    }
+
+    public static class SmsSendWorker extends Worker {
+        public SmsSendWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
+            super(context, workerParams);
+        }
+
+        @NonNull
+        @Override
+        public Result doWork() {
+            final String addr = getInputData().getString(SmsLoc_Intents.EXTRA_ADDR);
+            final String msg = getInputData().getString(SmsLoc_Intents.EXTRA_MSG);
+            final int retryCnt = getInputData().getInt(SmsLoc_Intents.EXTRA_RETRY_CNT, 0);
+
+            try {
+                SmsUtils.sendSmsAndThrow(getApplicationContext(), addr, msg, retryCnt);
             }
+            catch (IllegalArgumentException e) {
+                // Technically if we throw here we would also throw on first try
+                NotificationHandler.getInstance(getApplicationContext())
+                        .createAndPostNotification(addr, "Resend FAIL", e.getMessage());
+                return Result.failure();
+            }
+            return Result.success();
         }
-
-        SmsManager smsManager;
-        if (Build.VERSION.SDK_INT < 31) {
-            // this one is depreciated in 31+
-            smsManager = SmsManager.getSmsManagerForSubscriptionId(subId);
-        }
-        else {
-            smsManager = context.getSystemService(SmsManager.class).createForSubscriptionId(subId);
-        }
-
-        if (smsManager == null) {
-            throw new IllegalArgumentException("Could not send sms: Invalid SIM Id");
-        }
-
-        smsManager.sendTextMessage(addr, null, msg, SmsSentReceiver.getPendingIntent(context), null);
     }
 
     /**
@@ -136,5 +172,32 @@ public class SmsUtils
         // Relax this check. A lot of issues reported with rejected mobile numbers. Use sentIntent to monitor success
 
         return pNumberUtil.format(phoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
+    }
+
+
+    private static SmsManager _getSmsManager(Context context) throws IllegalArgumentException
+    {
+        int subId = SmsLoc_Settings.SMS_SUB_ID.getInt(context);
+        if (subId == SmsLoc_Settings.SMS_SUB_ID_DEFAULT) {
+            subId = getDefaultSimId();
+            if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+                throw new IllegalArgumentException("Could not send SMS: Use default selected, but default SIM not selected in system settings");
+            }
+        }
+
+        SmsManager smsManager;
+        if (Build.VERSION.SDK_INT < 31) {
+            // this one is depreciated in 31+
+            smsManager = SmsManager.getSmsManagerForSubscriptionId(subId);
+        }
+        else {
+            smsManager = context.getSystemService(SmsManager.class).createForSubscriptionId(subId);
+        }
+
+        if (smsManager == null) {
+            throw new IllegalArgumentException("Could not send sms: Invalid SIM Id");
+        }
+
+        return smsManager;
     }
 }
