@@ -18,9 +18,13 @@ package io.github.wandomium.smsloc;
 
 import android.app.ActivityManager;
 import android.content.ActivityNotFoundException;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
@@ -33,6 +37,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.viewpager2.widget.ViewPager2;
 
 import android.os.PowerManager;
@@ -45,11 +50,14 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
+import io.github.wandomium.smsloc.toolbox.ABaseBrdcstRcv;
 import io.github.wandomium.smsloc.toolbox.NotificationHandler;
 import io.github.wandomium.smsloc.toolbox.Utils;
 import io.github.wandomium.smsloc.ui.dialogs.SimSelectorDialogFragment;
 import io.github.wandomium.smsloc.ui.dialogs.SimpleDialogs;
+import io.github.wandomium.smsloc.ui.dialogs.SmsSendFailDialog;
 import io.github.wandomium.smsloc.ui.main.TabPagerAdapter;
 import io.github.wandomium.smsloc.toolbox.PermissionMngr;
 
@@ -61,6 +69,9 @@ public class MainActivity extends AppCompatActivity
     private static boolean mCreated = false;
     private PermissionMngr mPermissionMngr;
     private ActivityResultLauncher<Intent> mSettingsLauncher;
+
+    private boolean mIsPaused = false;
+    private BroadcastReceiver mSmsFailReceiver;
 
     public MainActivity() {
         super();
@@ -119,6 +130,22 @@ public class MainActivity extends AppCompatActivity
                     MainActivity.this.mPermissionMngr.refreshPermissions();
                     MainActivity.this.invalidateOptionsMenu();
                 });
+
+        /* Sms Send FAILED */
+        mIsPaused = false;
+        mSmsFailReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (mIsPaused) {
+                        SmsSendFailDialog.showNotification(context, intent);
+                }
+                else {
+                    SmsSendFailDialog.showDialog(context, intent);
+                }
+            }
+        };
+        ContextCompat.registerReceiver(this, mSmsFailReceiver,
+            new IntentFilter(SmsLoc_Intents.ACTION_SMS_SEND_FAIL), ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     public boolean batteryOptimizationOn() {
@@ -160,6 +187,14 @@ public class MainActivity extends AppCompatActivity
         NotificationHandler.getInstance(this).clearAllNotifications();
         MainActivity.this.mPermissionMngr.refreshPermissions();
         invalidateOptionsMenu(); //permission or battery settings alert
+    }
+
+    @Override
+    public void onDestroy() {
+        unregisterReceiver(mSmsFailReceiver);
+        mCreated = false;
+
+        super.onDestroy();
     }
 
 /*  LEAVE NOTE IN FOR FUTURE REFERENCE - Took some time to figure this one out

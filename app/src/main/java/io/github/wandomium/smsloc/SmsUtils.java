@@ -100,46 +100,6 @@ public class SmsUtils
                 SmsSentReceiver.getPendingIntent(context, addr, msg, retryCnt), null);
     }
 
-    public static void scheduleSmsSend(Context context, final String addr, final String msg, final int retryCnt) {
-        Data inputData = new Data.Builder()
-                .putString(SmsLoc_Intents.EXTRA_ADDR, addr)
-                .putString(SmsLoc_Intents.EXTRA_MSG, msg)
-                .putInt(SmsLoc_Intents.EXTRA_RETRY, retryCnt)
-                .build();
-
-        OneTimeWorkRequest smsWorkRequest = new OneTimeWorkRequest.Builder(SmsSendWorker.class)
-                .setInputData(inputData)
-                .setInitialDelay(SmsSentReceiver.RETRY_TO_M, TimeUnit.MINUTES)
-                .build();
-
-        WorkManager.getInstance(context).enqueue(smsWorkRequest);
-    }
-
-    public static class SmsSendWorker extends Worker {
-        public SmsSendWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
-            super(context, workerParams);
-        }
-
-        @NonNull
-        @Override
-        public Result doWork() {
-            final String addr = getInputData().getString(SmsLoc_Intents.EXTRA_ADDR);
-            final String msg = getInputData().getString(SmsLoc_Intents.EXTRA_MSG);
-            final int retryCnt = getInputData().getInt(SmsLoc_Intents.EXTRA_RETRY, 0);
-
-            try {
-                SmsUtils.sendSmsAndThrow(getApplicationContext(), addr, msg, retryCnt);
-            }
-            catch (IllegalArgumentException e) {
-                // Technically if we throw here we would also throw on first try
-                NotificationHandler.getInstance(getApplicationContext())
-                        .createAndPostNotification(addr, "Resend FAIL", e.getMessage());
-                return Result.failure();
-            }
-            return Result.success();
-        }
-    }
-
     /**
      * WHEN ADDING NEW PERSON: Don't even try with SIM country ISO
      * if we pass null, then it will fail if the number does not have a

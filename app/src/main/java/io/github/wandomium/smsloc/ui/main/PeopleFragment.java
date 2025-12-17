@@ -199,7 +199,6 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                     }
                     // TODO: check if there is a better place to put this
                     if (action.equals(SmsLoc_Intents.ACTION_SMS_SEND_FAIL)) {
-                        Log.d("gggggg", "got intent ");
                         SmsSendFailDialog.showDialog(context, intent);
                     }
                     else if (action.equals(SmsLoc_Intents.ACTION_PERSON_REMOVED)) {

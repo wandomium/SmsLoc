@@ -19,6 +19,7 @@ import io.github.wandomium.smsloc.data.file.PeopleDataFile;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.NotificationHandler;
 import io.github.wandomium.smsloc.toolbox.Utils;
+import io.github.wandomium.smsloc.ui.dialogs.SmsSendFailDialog;
 
 public class SmsSentReceiver extends BroadcastReceiver
 {
@@ -65,18 +66,16 @@ public class SmsSentReceiver extends BroadcastReceiver
         // If it is a request, notify the user and let him decide
         final String addr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);
 
-        // Show alert if user is currently in the app (which will be almost always if he just requested location
+        Intent outIntent = SmsLoc_Intents.generateIntentWithAddr(context, addr, SmsLoc_Intents.ACTION_SMS_SEND_FAIL);
+        outIntent.putExtra(SmsLoc_Intents.EXTRA_MSG, msg);
+        outIntent.putExtra(SmsLoc_Intents.EXTRA_DEFOPT, detail);
         if (MainActivity.isCreated()) {
-            Intent outIntent = SmsLoc_Intents.generateIntentWithAddr(context, addr, SmsLoc_Intents.ACTION_SMS_SEND_FAIL);
-            outIntent.putExtra(SmsLoc_Intents.EXTRA_MSG, msg);
-            outIntent.putExtra(SmsLoc_Intents.EXTRA_DEFOPT, detail);
+            // Show alert if user is currently in the app (which will be almost always if he just requested location
             context.sendBroadcast(outIntent);
         }
         else {
-            final String displayName = Utils.getDisplayName(context, addr);
-
-            NotificationHandler.getInstance(context)
-                .createAndPostNotification("Request to " + displayName, status, detail);
+            // Show notification if this was somehow triggered in he background
+            SmsSendFailDialog.showNotification(context, outIntent);
         }
     }
 

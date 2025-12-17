@@ -7,29 +7,50 @@ import androidx.appcompat.app.AlertDialog;
 
 import io.github.wandomium.smsloc.SmsUtils;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
+import io.github.wandomium.smsloc.toolbox.NotificationHandler;
 import io.github.wandomium.smsloc.toolbox.Utils;
 
 // currently we only deal with failed requests. Responses are retries automatically
 public class SmsSendFailDialog
 {
-    public static void showDialog(Context ctx, Intent intent) {
+    private static AlertDialog mInstance;
 
-        final String addr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);
+    public static void showNotification(Context ctx, Intent intent) {
+        NotificationHandler.getInstance(ctx).createAndPostNotification(
+            _getTitle(ctx, intent), "SMS send fail", _getDetails(intent)
+        );
+    }
+
+    public static void showDialog(Context ctx, Intent intent) {
+        if (mInstance != null) {
+            mInstance.dismiss();
+        }
+        mInstance = new AlertDialog.Builder(ctx)
+                .setTitle(_getTitle(ctx, intent))
+                .setMessage("SMS send fail - " + _getDetails(intent))
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Resend", (dialog, id) -> {
+                    dialog.dismiss();
+                    SmsUtils.sendSms(ctx,
+                        intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR),
+                        intent.getStringExtra(SmsLoc_Intents.EXTRA_MSG));
+                })
+                .setOnDismissListener(dialog -> mInstance = null)
+                .create();
+        mInstance.show();
+    }
+
+    private static String _getTitle(Context ctx, Intent intent) {
         final String msg  = intent.getStringExtra(SmsLoc_Intents.EXTRA_MSG);
-        final String details = intent.getStringExtra(SmsLoc_Intents.EXTRA_DEFOPT);
+        final String addr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);
 
         final String displayName = Utils.getDisplayName(ctx, addr);
         final Boolean isResponse = SmsUtils.isResponseSms(msg);
 
-        // we don't really care about this because activity is in te foreground
-        final int retryCount = intent.getIntExtra(SmsLoc_Intents.EXTRA_RETRY, 0) + 1;
+        return (isResponse ? "Response to " : "Rrequest to ") + displayName;
+    }
 
-        new AlertDialog.Builder(ctx)
-                .setTitle((isResponse ? "Response to " : "Rrequest to ") + displayName)
-                .setMessage("SMS send fail - " + details)
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Resend", (dialog, id) -> {
-                    SmsUtils.sendSms(ctx, addr, msg);
-                }).create().show();
+    private static String _getDetails(Intent intent) {
+        return intent.getStringExtra(SmsLoc_Intents.EXTRA_DEFOPT);
     }
 }
