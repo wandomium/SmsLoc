@@ -17,20 +17,15 @@
 package io.github.wandomium.smsloc;
 
 import android.Manifest;
-import android.app.PendingIntent;
 import android.content.Context;
-import android.content.Intent;
-import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
 import android.os.Build;
 import android.telephony.SmsManager;
 import android.telephony.SubscriptionManager;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
-import androidx.work.Constraints;
 import androidx.work.Data;
-import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 import androidx.work.Worker;
@@ -55,6 +50,17 @@ public class SmsUtils
     public static final String REQUEST_CODE = "Loc?";
     public static final String RESPONSE_CODE = "Loc:";
     public static final int CODE_LEN = 4;
+
+    public static Boolean isResponseSms(final String smsText) {
+        if (smsText == null) {
+            return null;
+        }
+        switch (smsText.substring(0, SmsUtils.CODE_LEN)) {
+            case SmsUtils.REQUEST_CODE  -> { return false; }
+            case SmsUtils.RESPONSE_CODE -> { return true; }
+            default -> { return null; } //not our sms. should not happen
+        }
+    }
 
     /**
      * It is getting progressively harder to select default for SMS,
@@ -98,7 +104,7 @@ public class SmsUtils
         Data inputData = new Data.Builder()
                 .putString(SmsLoc_Intents.EXTRA_ADDR, addr)
                 .putString(SmsLoc_Intents.EXTRA_MSG, msg)
-                .putInt(SmsLoc_Intents.EXTRA_RETRY_CNT, retryCnt)
+                .putInt(SmsLoc_Intents.EXTRA_RETRY, retryCnt)
                 .build();
 
         OneTimeWorkRequest smsWorkRequest = new OneTimeWorkRequest.Builder(SmsSendWorker.class)
@@ -119,7 +125,7 @@ public class SmsUtils
         public Result doWork() {
             final String addr = getInputData().getString(SmsLoc_Intents.EXTRA_ADDR);
             final String msg = getInputData().getString(SmsLoc_Intents.EXTRA_MSG);
-            final int retryCnt = getInputData().getInt(SmsLoc_Intents.EXTRA_RETRY_CNT, 0);
+            final int retryCnt = getInputData().getInt(SmsLoc_Intents.EXTRA_RETRY, 0);
 
             try {
                 SmsUtils.sendSmsAndThrow(getApplicationContext(), addr, msg, retryCnt);

@@ -45,6 +45,13 @@ public class Utils
         return new SimpleDateFormat("yyyy-MM-dd", Locale.GERMAN).format(new Date(System.currentTimeMillis()));
     }
 
+    public static String getDisplayName(Context context, final String addr) {
+        try {
+            return PeopleDataFile.getInstance(context).getDataEntry(addr).getDisplayName();
+        } catch (Exception ignored) {
+            return unlistedDisplayName(addr);
+        }
+    }
     public static String unlistedDisplayName(String addr)
     {
         return String.format("%s (unlisted)", addr);

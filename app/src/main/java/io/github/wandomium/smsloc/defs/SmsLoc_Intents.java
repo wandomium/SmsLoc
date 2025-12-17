@@ -30,7 +30,7 @@ public class SmsLoc_Intents
 {
     public static final String EXTRA_ADDR         = "Addr";
     public static final String EXTRA_MSG          = "Msg";
-    public static final String EXTRA_RETRY_CNT    = "RtryCnt";
+    public static final String EXTRA_RETRY = "RtryCnt";
     public static final String EXTRA_DEFOPT       = "Extra";
     public static final String EXTRA_WAKE_LOCK_ID = "WakeLockId";
 
@@ -45,6 +45,7 @@ public class SmsLoc_Intents
     public static final String ACTION_NOT_WHITELISTED    = BuildConfig.APPLICATION_ID + ".intent.not_whitelisted";
     public static final String ACTION_LOG_UPDATED        = BuildConfig.APPLICATION_ID + ".intent.log_updated";
     public static final String ACTION_ERROR              = BuildConfig.APPLICATION_ID + ".intent.error";
+    public static final String ACTION_SMS_SEND_FAIL      = BuildConfig.APPLICATION_ID + ".intent.sms_send_fail";
 
     //TODO update this
     public static android.content.Intent generateIntentWithAddr(Context ctx, final String addr, final String action)

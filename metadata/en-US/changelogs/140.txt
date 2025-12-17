@@ -6,3 +6,4 @@ Bugfixes:
 Enhancements:
 [] Retry SMS send on error automatically for responses (#29)
 [] Treat anything but 'Activity.RESULT_OK' as SMS sent error (#27)
+[] Add AlertDialog if send request fails

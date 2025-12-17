@@ -29,6 +29,7 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -65,6 +66,8 @@ import io.github.wandomium.smsloc.ui.dialogs.PersonActionDialogFragment;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.Utils;
+import io.github.wandomium.smsloc.ui.dialogs.SmsRerquestSendFailDialog;
+import kotlinx.serialization.descriptors.StructureKind;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -186,7 +189,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
         mReceiverList.add(new ABaseBrdcstRcv<>(PeopleFragment.this,
                 new String[]{SmsLoc_Intents.ACTION_REQUEST_SENT, SmsLoc_Intents.ACTION_RESPONSE_RCVD,
                         SmsLoc_Intents.ACTION_NEW_LOCATION, SmsLoc_Intents.ACTION_DAY_DATA_CLR,
-                        SmsLoc_Intents.ACTION_PERSON_REMOVED}) {
+                        SmsLoc_Intents.ACTION_PERSON_REMOVED, SmsLoc_Intents.ACTION_SMS_SEND_FAIL}) {
             @Override
             public void onReceive(Context context, Intent intent) {
                 final String action = intent.getAction();
@@ -195,7 +198,12 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                         LocationRetriever.getLocation(LOC_DELAY_MS,
                                 PeopleFragment.this, PeopleFragment.this.requireActivity());
                     }
-                    if (action.equals(SmsLoc_Intents.ACTION_PERSON_REMOVED)) {
+                    // TODO: check if there is a better place to put this
+                    if (action.equals(SmsLoc_Intents.ACTION_SMS_SEND_FAIL)) {
+                        Log.d("gggggg", "got intent ");
+                        SmsRerquestSendFailDialog.showDialog(context, intent);
+                    }
+                    else if (action.equals(SmsLoc_Intents.ACTION_PERSON_REMOVED)) {
                         final String addr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);
                         if (addr != null) {
                             mParent.get()._listAdapter().remove(addr);
