@@ -13,6 +13,7 @@
     <string name="sim_select_msg">Default option uses System default SIM for voice calls. If default SIM is not selected in system settings, SMS sending will not work. </string>
     <string name="per_loc_rationale">App needs access to GPS location (FINE_LOCATION) all the time (BACKGROUND_LOCATION) so it can respond to incoming location requests.</string>
     <string name="per_sms_rationale">App needs RECEIVE_SMS permission to detect location requests and SEND_SMS permission for responding to and sending requests.</string>
+    <string name="per_phone_rationale">App needs READ_PHONE_STATE permission to automatically resend response when network is available.</string>
     <!-- GUI ELEMENTS -->
     <string name="btn_show_unauthorized_req">Show unauthorized requests</string>
     <string name="btn_clear_log">Clear Log</string>
