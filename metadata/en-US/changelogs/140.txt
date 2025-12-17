@@ -1,7 +1,7 @@
 [] Check DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 
 Bugfixes:
-[] Fix debug print in startForeground (#26)
+[x] Fix debug print in startForeground (#26)
 
 Enhancements:
 [x] Retry SMS send on error automatically for responses (#29)

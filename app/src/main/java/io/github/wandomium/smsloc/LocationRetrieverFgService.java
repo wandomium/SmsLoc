@@ -83,6 +83,9 @@ public class LocationRetrieverFgService extends Service implements LocationRetri
             if (Build.VERSION.SDK_INT >= 31 && e instanceof ForegroundServiceStartNotAllowedException) {
                 LogFile.getInstance(this).addLogEntry("Could not start GPS fix due to app's background restrictions");
             }
+            else if (e instanceof SecurityException) {
+                LogFile.getInstance(this).addLogEntry("Could not start GPS fix - missing permission: " + e.getMessage());
+            }
             else {
                 // These are actual bugs in the code - manifest mismatch
                 // InvalidForegroundServiceType, MissingForegroundServiceTypeException and SecurityException in 34
