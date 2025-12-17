@@ -22,14 +22,7 @@ import android.os.Build;
 import android.telephony.SmsManager;
 import android.telephony.SubscriptionManager;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
-import androidx.work.Data;
-import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkManager;
-import androidx.work.Worker;
-import androidx.work.WorkerParameters;
 
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
@@ -38,12 +31,9 @@ import com.google.i18n.phonenumbers.Phonenumber;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
-import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
-import io.github.wandomium.smsloc.toolbox.NotificationHandler;
 
 public class SmsUtils
 {
@@ -97,7 +87,7 @@ public class SmsUtils
         }
 
         _getSmsManager(context).sendTextMessage(addr, null, msg,
-                SmsSentReceiver.getPendingIntent(context, addr, msg, retryCnt), null);
+                SmsSentStatusReceiver.getPendingIntent(context, addr, msg, retryCnt), null);
     }
 
     /**

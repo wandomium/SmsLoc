@@ -8,22 +8,13 @@ import android.content.Intent;
 import android.telephony.SmsManager;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
-
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-
-import java.util.Objects;
-
 import io.github.wandomium.smsloc.data.file.LogFile;
-import io.github.wandomium.smsloc.data.file.PeopleDataFile;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
-import io.github.wandomium.smsloc.toolbox.NotificationHandler;
-import io.github.wandomium.smsloc.toolbox.Utils;
 import io.github.wandomium.smsloc.ui.dialogs.SmsSendFailDialog;
 
-public class SmsSentReceiver extends BroadcastReceiver
+public class SmsSentStatusReceiver extends BroadcastReceiver
 {
-    private static final String CLASS_TAG = SmsSentReceiver.class.getSimpleName();
+    private static final String CLASS_TAG = SmsSentStatusReceiver.class.getSimpleName();
 
     private static int sRequestCode = 0;
 
@@ -81,7 +72,7 @@ public class SmsSentReceiver extends BroadcastReceiver
 
     public static PendingIntent getPendingIntent(Context ctx, final String addr, final String msg, final int retryCnt)
     {
-        Intent intent = new Intent(ctx, SmsSentReceiver.class);
+        Intent intent = new Intent(ctx, SmsSentStatusReceiver.class);
         intent.putExtra(SmsLoc_Intents.EXTRA_ADDR, addr);
         intent.putExtra(SmsLoc_Intents.EXTRA_MSG, msg);
         intent.putExtra(SmsLoc_Intents.EXTRA_RETRY, retryCnt);
