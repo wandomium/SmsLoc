@@ -1,6 +1,5 @@
 package io.github.wandomium.smsloc;
 
-import android.app.Notification;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -17,8 +16,6 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ServiceCompat;
 
-import io.github.wandomium.smsloc.data.file.LogFile;
-import io.github.wandomium.smsloc.data.file.PeopleDataFile;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.NotificationHandler;
 import io.github.wandomium.smsloc.toolbox.Utils;

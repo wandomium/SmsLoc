@@ -9,7 +9,8 @@ import io.github.wandomium.smsloc.SmsUtils;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.Utils;
 
-public class SmsRerquestSendFailDialog
+// currently we only deal with failed requests. Responses are retries automatically
+public class SmsSendFailDialog
 {
     public static void showDialog(Context ctx, Intent intent) {
 

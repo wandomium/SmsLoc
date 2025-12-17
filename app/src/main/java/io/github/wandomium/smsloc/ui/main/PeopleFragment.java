@@ -66,8 +66,7 @@ import io.github.wandomium.smsloc.ui.dialogs.PersonActionDialogFragment;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.Utils;
-import io.github.wandomium.smsloc.ui.dialogs.SmsRerquestSendFailDialog;
-import kotlinx.serialization.descriptors.StructureKind;
+import io.github.wandomium.smsloc.ui.dialogs.SmsSendFailDialog;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -201,7 +200,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                     // TODO: check if there is a better place to put this
                     if (action.equals(SmsLoc_Intents.ACTION_SMS_SEND_FAIL)) {
                         Log.d("gggggg", "got intent ");
-                        SmsRerquestSendFailDialog.showDialog(context, intent);
+                        SmsSendFailDialog.showDialog(context, intent);
                     }
                     else if (action.equals(SmsLoc_Intents.ACTION_PERSON_REMOVED)) {
                         final String addr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);

@@ -24,9 +24,6 @@ public class SmsSentReceiver extends BroadcastReceiver
 {
     private static final String CLASS_TAG = SmsSentReceiver.class.getSimpleName();
 
-    public final static int NUM_RETRIES = 6;
-    public final static int RETRY_TO_M = 10;
-
     private static int sRequestCode = 0;
 
     // this will always be to
@@ -37,27 +34,27 @@ public class SmsSentReceiver extends BroadcastReceiver
         final Context APPCTX = context.getApplicationContext();
 
         if (getResultCode() == Activity.RESULT_OK) {
-            LOGFILE.addLogEntry("SMS sent");
-            Toast.makeText(APPCTX, "SMS sent", Toast.LENGTH_LONG).show();
+            final String status = "SMS sent";
+            LOGFILE.addLogEntry(status);
+            Toast.makeText(APPCTX, status, Toast.LENGTH_LONG).show();
             return;
         }
 
         // Send failed
-        String status = "SMS send FAIL";
-        String detail = switch (getResultCode()) {
+        final String status = "SMS send FAIL";
+        final String detail = switch (getResultCode()) {
             case SmsManager.RESULT_ERROR_GENERIC_FAILURE -> "generic failure";
             case SmsManager.RESULT_ERROR_NO_SERVICE -> "no service";
             case SmsManager.RESULT_ERROR_NULL_PDU -> "null PDU error";
             case SmsManager.RESULT_ERROR_RADIO_OFF -> "radio off";
             default -> "reason unknown (" + getResultCode() + ")";
         };
+        LOGFILE.addLogEntry(status + " - " + detail);
 
         // Responses need to be resent ALWAYS!
         final String msg = intent.getStringExtra(SmsLoc_Intents.EXTRA_MSG);
         final Boolean isResponseSms = SmsUtils.isResponseSms(msg);
         if (isResponseSms) {
-            LOGFILE.addLogEntry(status + " - " + detail);
-
             // Retries when network comes back. No need to panic. If all resend attempts fail,
             // user will be notified in foreground service
             intent.setClass(APPCTX, SmsResendFgService.class);
@@ -65,21 +62,21 @@ public class SmsSentReceiver extends BroadcastReceiver
             return;
         }
 
-        // Notify the user
+        // If it is a request, notify the user and let him decide
         final String addr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);
-        final String displayName = Utils.getDisplayName(context, addr);
 
-        NotificationHandler.getInstance(context)
-            .createAndPostNotification("Request to " + displayName, status, detail);
-
-        // Show toast if user is currently in the app (which will be almost always if he just requested location
+        // Show alert if user is currently in the app (which will be almost always if he just requested location
         if (MainActivity.isCreated()) {
-            Toast.makeText(APPCTX, status, Toast.LENGTH_LONG).show();
-
             Intent outIntent = SmsLoc_Intents.generateIntentWithAddr(context, addr, SmsLoc_Intents.ACTION_SMS_SEND_FAIL);
             outIntent.putExtra(SmsLoc_Intents.EXTRA_MSG, msg);
             outIntent.putExtra(SmsLoc_Intents.EXTRA_DEFOPT, detail);
             context.sendBroadcast(outIntent);
+        }
+        else {
+            final String displayName = Utils.getDisplayName(context, addr);
+
+            NotificationHandler.getInstance(context)
+                .createAndPostNotification("Request to " + displayName, status, detail);
         }
     }
 
