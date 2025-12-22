@@ -177,6 +177,7 @@ public class MainActivity extends AppCompatActivity
     protected void onPause()
     {
         Utils.closeAllFiles(this);
+        mIsPaused = true;
         super.onPause();
     }
 
@@ -184,6 +185,7 @@ public class MainActivity extends AppCompatActivity
     protected void onResume()
     {
         super.onResume();
+        mIsPaused = false;
         NotificationHandler.getInstance(this).clearAllNotifications();
         MainActivity.this.mPermissionMngr.refreshPermissions();
         invalidateOptionsMenu(); //permission or battery settings alert

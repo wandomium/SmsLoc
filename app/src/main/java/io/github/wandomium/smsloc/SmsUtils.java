@@ -18,6 +18,7 @@ package io.github.wandomium.smsloc;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.telephony.SmsManager;
 import android.telephony.SubscriptionManager;
@@ -33,6 +34,7 @@ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import java.util.Locale;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
+import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 
 public class SmsUtils
@@ -64,12 +66,21 @@ public class SmsUtils
             SubscriptionManager.getDefaultVoiceSubscriptionId() : SubscriptionManager.getDefaultSmsSubscriptionId();
     }
 
-    public static boolean sendSms(Context context, final String addr, final String msg)
+    public static boolean sendSms(Context context, final String addr, final String msg) {
+        return sendSms(context, addr, msg, 0);
+    }
+    public static boolean sendSms(Context context, Intent intent) {
+        return sendSms(context,
+                intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR),
+                intent.getStringExtra(SmsLoc_Intents.EXTRA_MSG),
+                intent.getIntExtra(SmsLoc_Intents.EXTRA_RETRY, 0));
+    }
+    public static boolean sendSms(Context context, final String addr, final String msg, final int retryCnt)
     {
         try {
-            sendSmsAndThrow(context, addr, msg);
+            sendSmsAndThrow(context, addr, msg, retryCnt);
         } catch (Exception e) {
-            LogFile.getInstance(context).addLogEntry("ERROR: " + e.getMessage());
+            LogFile.getInstance(context).addLogEntry("Send SMS ERROR: " + e.getMessage());
             return false;
         }
         return true;
@@ -83,7 +94,7 @@ public class SmsUtils
      */
     public static void sendSmsAndThrow(Context context, final String addr, final String msg, final int retryCnt) {
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PERMISSION_GRANTED) {
-            throw new SecurityException("Could not send SMS: Missing SEND_SMS permissions");
+            throw new SecurityException("Missing SEND_SMS permissions");
         }
 
         _getSmsManager(context).sendTextMessage(addr, null, msg,
@@ -137,7 +148,7 @@ public class SmsUtils
         if (subId == SmsLoc_Settings.SMS_SUB_ID_DEFAULT) {
             subId = getDefaultSimId();
             if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-                throw new IllegalArgumentException("Could not send SMS: Use default selected, but default SIM not selected in system settings");
+                throw new IllegalArgumentException("Use default selected, but default SIM not selected in system settings");
             }
         }
 
@@ -151,7 +162,7 @@ public class SmsUtils
         }
 
         if (smsManager == null) {
-            throw new IllegalArgumentException("Could not send sms: Invalid SIM Id");
+            throw new IllegalArgumentException("Invalid SIM Id");
         }
 
         return smsManager;

@@ -193,13 +193,14 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
             public void onReceive(Context context, Intent intent) {
                 final String action = intent.getAction();
                 if (action != null) {
-                    if (_listAdapter().mMyLocation == null) {
-                        LocationRetriever.getLocation(LOC_DELAY_MS,
-                                PeopleFragment.this, PeopleFragment.this.requireActivity());
-                    }
                     // TODO: check if there is a better place to put this
                     if (action.equals(SmsLoc_Intents.ACTION_SMS_SEND_FAIL)) {
                         SmsSendFailDialog.showDialog(context, intent);
+                        return;
+                    }
+                    if (_listAdapter().mMyLocation == null) {
+                        LocationRetriever.getLocation(LOC_DELAY_MS,
+                                PeopleFragment.this, PeopleFragment.this.requireActivity());
                     }
                     else if (action.equals(SmsLoc_Intents.ACTION_PERSON_REMOVED)) {
                         final String addr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);

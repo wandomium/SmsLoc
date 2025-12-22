@@ -92,8 +92,9 @@ public class PersonActionDialogFragment extends DialogFragment
                             }
                             catch (Exception e) {
                                 final Context ctx = PersonActionDialogFragment.this.requireContext();
-                                LogFile.getInstance(ctx).addLogEntry("ERROR: " + e.getMessage());
-                                _showErrorDialog(e.getMessage()); //"App needs SEND_SMS permission for this action");
+                                final String msg = "Send SMS FAIL: " + e.getMessage();
+                                LogFile.getInstance(ctx).addLogEntry(msg);
+                                _showErrorDialog(msg); //"App needs SEND_SMS permission for this action");
                             }
                             break;
 
@@ -131,8 +132,6 @@ public class PersonActionDialogFragment extends DialogFragment
 
     private void _sendSmsLocationQuery()
     {
-        //TODO-Minor
-        //Here we have an option to have a pending intent that checks if SMS was sent
         SmsUtils.sendSmsAndThrow(getContext(), mAddr, SmsUtils.REQUEST_CODE);
 
         final SmsDayDataFile DAYDATA = SmsDayDataFile.getInstance(getContext());

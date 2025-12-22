@@ -10,7 +10,6 @@ import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.NotificationHandler;
 import io.github.wandomium.smsloc.toolbox.Utils;
 
-// currently we only deal with failed requests. Responses are retries automatically
 public class SmsSendFailDialog
 {
     private static AlertDialog mInstance;
@@ -47,7 +46,7 @@ public class SmsSendFailDialog
         final String displayName = Utils.getDisplayName(ctx, addr);
         final Boolean isResponse = SmsUtils.isResponseSms(msg);
 
-        return (isResponse ? "Response to " : "Rrequest to ") + displayName;
+        return (isResponse ? "Response to " : "Request to ") + displayName;
     }
 
     private static String _getDetails(Intent intent) {

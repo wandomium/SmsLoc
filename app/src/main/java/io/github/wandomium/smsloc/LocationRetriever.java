@@ -38,6 +38,8 @@ import io.github.wandomium.smsloc.data.file.LogFile;
 @SuppressLint("MissingPermission")
 public class LocationRetriever implements Consumer<Location>, LocationListener
 {
+    private final static String CLASS_TAG = LocationRetriever.class.getSimpleName();
+
     private Timer mToutTimer;
     private LocCb mLocCb;
 
@@ -143,22 +145,24 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
     // Update with new location and clear all references
     private void _finishCall(Location location, String msg)
     {
+        Log.d(CLASS_TAG, "_finishCall");
         // For API29: Handles a race condition when timer expires but we get a
         // location update before we manage to call removeUpdates
         if (mCallFinished) {
-            Log.d("LocationRetriever", "double call of _callFinished");
+            Log.d("LocationRetriever", "double call of _callFinished, " + msg);
             return;
         }
         mCallFinished = true;
 
         mToutTimer.cancel();
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT <= 29) {
             ((LocationManager) mCtx.getSystemService(Context.LOCATION_SERVICE)).removeUpdates(this);
         }
         else {
             mCancelSignal.cancel();
         }
 
+        Log.d(CLASS_TAG, "location callback");
         mLocCb.onLocationRcvd(location, msg);
 
         mExecutor.shutdownNow();
