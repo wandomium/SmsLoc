@@ -44,11 +44,12 @@ public class SmsSentStatusReceiver extends BroadcastReceiver
         // Send failed
         final String status = "SMS send FAIL";
         final String detail = switch (getResultCode()) {
-            case SmsManager.RESULT_ERROR_GENERIC_FAILURE -> "generic failure";
             case SmsManager.RESULT_ERROR_NO_SERVICE -> "no service";
             case SmsManager.RESULT_ERROR_NULL_PDU -> "null PDU error";
             case SmsManager.RESULT_ERROR_RADIO_OFF -> "radio off";
-            default -> "reason unknown (" + getResultCode() + ")";
+            case SmsManager.RESULT_ERROR_GENERIC_FAILURE -> "generic failure";
+            // could happen in EMERGENCY_ONLY state
+            default -> "reason unknown (code=" + getResultCode() + ") - check network";
         };
         LOGFILE.addLogEntry(status + " - " + detail);
         intent.putExtra(SmsLoc_Intents.EXTRA_DEFOPT, detail);
