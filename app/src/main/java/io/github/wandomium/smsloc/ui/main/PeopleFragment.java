@@ -335,34 +335,8 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                 holder.mPersonIcon.setText(person.getInitials());
             }
 
-            int color = Color.GRAY;
-            String text = "No location data";
-
-            if (locData != null)
-            {
-                if (locData.locationUpToDate())    { color = Color.rgb(39,204,44); }
-                else if (locData.requestPending())      { color = Color.rgb(255,174,66); }
-                else if (!locData.lastResponseValid())  { color = Color.RED; }
-
-                if (locData.getLastValidLocation() != null) {
-                    final long utc = locData.getLastValidLocation().utc;
-
-                    text = String.format("Last valid location: %s\n\tElapsed: %s\n",
-                            new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.GERMAN).format(new Date(utc)),
-                            Utils.timeToNowStr(locData.getLastValidLocation().utc));
-
-                    Float distance = null;
-                    if (mMyLocation != null) {
-                        distance = locData.getLastValidLocation().distanceFrom(mMyLocation);
-                    }
-                    text +=
-                        (distance == null) ?
-                            String.format(SmsLoc_Common.LOCALE, "\tDistance: %s", "Get My Loc Failed") //locRetriever.getInvalidLocReasonSimple())
-                          : String.format(SmsLoc_Common.LOCALE, "\tDistance: %.4f km", distance/1000.0);
-                }
-            }
-
             /* gps status icon */
+            final int color = _getStatusColor(locData);
             final Drawable statusIcon = ResourcesCompat.getDrawable(parent.getResources(), R.drawable.ic_location_marker_24, null);
             if (statusIcon != null) {
                 statusIcon.setColorFilter(new BlendModeColorFilter(color, BlendMode.SRC_ATOP));
@@ -373,9 +347,49 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
             }
 
             /* detail text */
+            final String text = _getLocationText(locData);
             ((ViewHolder)convertView.getTag()).mText.setText(String.format("%s\n%s", person.getDisplayName(), text));
 
             return convertView;
+        }
+
+        private int _getStatusColor(SmsLocData locData)
+        {
+            if (locData == null) {
+                return Color.GRAY;
+            }
+            if (!locData.requestPending() && !locData.hasLocationData()) {
+                // we only received requests from this person
+                return Color.GRAY;
+            }
+            if (locData.locationUpToDate()) {
+                return Color.rgb(39,204,44);
+            }
+            if (locData.requestPending()) {
+                return Color.rgb(255,174,66);
+            }
+            if (!locData.lastResponseValid()) {
+                return Color.RED;
+            }
+            return Color.GRAY;
+        }
+
+        private String _getLocationText(SmsLocData locData) {
+            String text = "No location data";
+            if (locData != null && locData.getLastValidLocation() != null) {
+                text = String.format("Last valid location: %s\n\tElapsed: %s\n",
+                        Utils.msToStr(locData.getLastValidLocation().utc),
+                        Utils.timeToNowStr(locData.getLastValidLocation().utc));
+
+                Float distance = null;
+                if (mMyLocation != null) {
+                    distance = locData.getLastValidLocation().distanceFrom(mMyLocation);
+                }
+                text += (distance == null) ?
+                        "\tDistance: Get My Loc Failed" //locRetriever.getInvalidLocReasonSimple())
+                      : String.format(SmsLoc_Common.LOCALE, "\tDistance: %.4f km", distance/1000.0);
+            }
+            return text;
         }
     }
 }
