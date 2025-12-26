@@ -29,7 +29,6 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -68,11 +67,8 @@ import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.Utils;
 import io.github.wandomium.smsloc.ui.dialogs.SmsSendFailDialog;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
 
@@ -336,7 +332,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
             }
 
             /* gps status icon */
-            final int color = _getStatusColor(locData);
+            final int color = _getIconColor(locData);
             final Drawable statusIcon = ResourcesCompat.getDrawable(parent.getResources(), R.drawable.ic_location_marker_24, null);
             if (statusIcon != null) {
                 statusIcon.setColorFilter(new BlendModeColorFilter(color, BlendMode.SRC_ATOP));
@@ -353,7 +349,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
             return convertView;
         }
 
-        private int _getStatusColor(SmsLocData locData)
+        private int _getIconColor(SmsLocData locData)
         {
             if (locData == null) {
                 return Color.GRAY;

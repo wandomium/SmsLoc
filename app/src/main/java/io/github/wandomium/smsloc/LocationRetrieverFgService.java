@@ -162,5 +162,7 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
                 mDetails.isEmpty() ? null : mDetails.toString(),
          "SMS send fail" + mDetails.toString())
         );
+
+        // TODO-low my location update intent
     }
 }
