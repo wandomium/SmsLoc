@@ -69,12 +69,6 @@ public class SmsUtils
     public static boolean sendSms(Context context, final String addr, final String msg) {
         return sendSms(context, addr, msg, 0);
     }
-    public static boolean sendSms(Context context, Intent intent) {
-        return sendSms(context,
-                intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR),
-                intent.getStringExtra(SmsLoc_Intents.EXTRA_MSG),
-                intent.getIntExtra(SmsLoc_Intents.EXTRA_RETRY, 0));
-    }
     public static boolean sendSms(Context context, final String addr, final String msg, final int retryCnt)
     {
         try {
