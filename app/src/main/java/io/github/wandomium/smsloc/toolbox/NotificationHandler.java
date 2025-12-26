@@ -29,6 +29,8 @@ import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import io.github.wandomium.smsloc.R;
 
 import io.github.wandomium.smsloc.MainActivity;
@@ -45,7 +47,8 @@ public class NotificationHandler
     private static final int SUMMARY_ID = 0;
     private static final int INIT_ID = 2;
 
-    private int mNotId;
+    private static int mNotId = INIT_ID;
+    private static boolean mNotRestart = true;
 
     private final Context mAppContext;
     private final NotificationManagerCompat mNotificationMngr;
@@ -65,6 +68,7 @@ public class NotificationHandler
     private NotificationHandler(Context context)
     {
         mNotId = INIT_ID;
+        mNotRestart = true;
         // this one is a singleton so it's ok
         // app context will be alive as long as the app is alive, no weak ref needed
         mAppContext = context.getApplicationContext();
@@ -116,8 +120,9 @@ public class NotificationHandler
             mGroupingNotification = createGroupingNotification();
         }
         try {
-            if (mNotId == INIT_ID) {
+            if (mNotRestart) {
                 mNotificationMngr.notify(SUMMARY_ID, mGroupingNotification);
+                mNotRestart = false;
             }
 
             mNotificationMngr.notify(mNotId++, notification);
@@ -148,7 +153,7 @@ public class NotificationHandler
     public final void clearAllNotifications()
     {
         mNotificationMngr.cancelAll();
-        resetNotificationId();
+        restartNotifications();
     }
 
 /***** INTERNAL
@@ -200,12 +205,12 @@ public class NotificationHandler
         return builder.build();
     }
 
-    protected void resetNotificationId() { mNotId = INIT_ID; }
+    public final synchronized void restartNotifications() { mNotRestart = true; }
     public static class NotGroupClearedRcv extends BroadcastReceiver
     {
         @Override
         public void onReceive(Context context, Intent intent) {
-            NotificationHandler.getInstance(context).resetNotificationId();
+            NotificationHandler.getInstance(context).restartNotifications();
         }
     }
 }

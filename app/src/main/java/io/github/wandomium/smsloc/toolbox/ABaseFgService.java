@@ -80,16 +80,17 @@ public abstract class ABaseFgService<EntryDataT> extends Service
     public IBinder onBind(Intent intent) { return null; }
 
 
-    protected void onProcessEntryDone(QueueEntry<EntryDataT> qEntry, final String status, final String detail) {
-        Log.d(CLASS_TAG, "_onStopCommand");
-        int notId = mNotHandler.createAndPostNotification(
+    protected void onProcessEntryDoneWNot(QueueEntry<EntryDataT> qEntry, final String status, final String detail) {
+        mNotHandler.createAndPostNotification(
     cTitlePrefix + Utils.getDisplayName(this, qEntry.addr),
          cStatusPrefix + status,
                 detail
         );
 
+        onProcessEntryDone(qEntry);
+    }
+    protected void onProcessEntryDone(QueueEntry<EntryDataT> qEntry) {
         stopSelf(qEntry.startId);
-        Log.d(CLASS_TAG, "notid " + notId);
     }
 
     protected boolean enqueueEntry(QueueEntry<EntryDataT> qEntry) {
@@ -108,7 +109,7 @@ public abstract class ABaseFgService<EntryDataT> extends Service
         }
         catch (Exception e) {
             // security exceptions mostly
-            onProcessEntryDone(qEntry, "FAIL", "Could not start service (check log)");
+            onProcessEntryDoneWNot(qEntry, "FAIL", "Could not start service (check log)");
             LogFile.getInstance(this).addLogEntry(_getExceptionString(e));
             return false;
         }
@@ -117,26 +118,55 @@ public abstract class ABaseFgService<EntryDataT> extends Service
         if (!mQueue.offer(qEntry)) {
             // should really not get here in normal operation
             // TODO: limit queue size?
-            onProcessEntryDone(qEntry, "FAIL", "queue full");
+            onProcessEntryDoneWNot(qEntry, "FAIL", "queue full");
             return false;
         }
         return true;
     }
 
-    protected void drainQueue(final ProcessResult status, final ProcessResult detail)
+    protected void drainQueue(final ProcessResult processResult, final String detail)
     {
         while(mQueue != null && !mQueue.isEmpty()) {
-            ArrayList<QueueEntry<EntryDataT>> entries = new ArrayList<>(mQueue.size());
-            mQueue.drainTo(entries);
-
-            for (QueueEntry<EntryDataT> qEntry : entries) {
+            if (mQueue.size() == 1) {
+                QueueEntry<EntryDataT> qEntry = mQueue.poll();
                 final boolean processOk = processEntry(qEntry);
-                onProcessEntryDone(
-                        qEntry,
-                        status.getString(processOk),
-                        detail.getString(processOk)
-                );
-                // IMPORTANT: onDestroy can get called here, queue can become null!!!
+                onProcessEntryDoneWNot(
+                    qEntry, processResult.getString(processOk), detail);
+            }
+            else {
+                boolean joinedResultOk = true;
+                final int numEntries = mQueue.size();
+                ArrayList<QueueEntry<EntryDataT>> entries = new ArrayList<>(numEntries);
+                mQueue.drainTo(entries);
+
+                final LogFile LOGFILE = LogFile.getInstance(this);
+                LOGFILE.addLogEntry(detail);
+
+                for (int i = 0; i < numEntries; i++) {
+                    QueueEntry<EntryDataT> qEntry = entries.get(i);
+                    final boolean processOk = processEntry(qEntry); //this one already logs
+                    if (!processOk) {
+                        joinedResultOk = false;
+                    }
+
+                    // log for every item
+                    LOGFILE.addLogEntry(
+                        cTitlePrefix + Utils.getDisplayName(this, qEntry.addr)
+                            + ": " + cStatusPrefix + processResult.getString(processOk)
+                    );
+                    // notify only for last item
+                    if (i == numEntries - 1) {
+                        mNotHandler.createAndPostNotification(
+                cTitlePrefix + "[multiple]",
+                    cStatusPrefix +
+                                (joinedResultOk ? processResult.okStr : "ERROR (check log)"),
+                            joinedResultOk ? detail : null
+                        );
+                    }
+                    onProcessEntryDone(qEntry);
+                    // IMPORTANT: onDestroy can get called here,
+                    // queue & nothandler can become null!!!
+                }
             }
         }
     }

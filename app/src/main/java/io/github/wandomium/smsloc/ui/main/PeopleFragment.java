@@ -298,6 +298,10 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
         // Prevent duplicates
         @Override
         public void add(String addr) {
+            if (addr == null) {
+                Log.e(CLASS_TAG, "adding null address to list");
+                return;
+            }
             if (mUniqueList.add(addr)) { super.add(addr); }
         }
         @Override

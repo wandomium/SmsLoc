@@ -74,7 +74,7 @@ public class SmsUtils
         try {
             sendSmsAndThrow(context, addr, msg, retryCnt);
         } catch (Exception e) {
-            LogFile.getInstance(context).addLogEntry("Send SMS ERROR: " + e.getMessage());
+            LogFile.getInstance(context).addLogEntry(addr + ": Send SMS ERROR - " + e.getMessage());
             return false;
         }
         return true;

@@ -121,8 +121,8 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
     }
     // OVERRIDES
     @Override
-    protected void onProcessEntryDone(QueueEntry<Integer> queueEntry, final String status, final String detail) {
-        super.onProcessEntryDone(queueEntry, status, detail);
+    protected void onProcessEntryDone(QueueEntry<Integer> queueEntry) {
+        super.onProcessEntryDone(queueEntry);
         SmsReceiver.releaseWakeLock(queueEntry.data());
     }
 
@@ -156,11 +156,8 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
         // In some bizarre situation where we get crazy amounts of location requests,
         // this could loop forever but it is not a realistic scenario
         drainQueue(
-            new ProcessResult(mCallStatus, "ERROR"),
-            new ProcessResult(
-                mDetails.isEmpty() ? null : mDetails.toString(),
-         "SMS send fail" + mDetails.toString())
-        );
+                new ProcessResult(mCallStatus, "Sms send ERROR"),
+                mDetails.isEmpty() ? null : mDetails.toString());
 
         // TODO-low my location update intent
     }

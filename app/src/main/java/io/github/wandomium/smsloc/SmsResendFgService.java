@@ -87,7 +87,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         // do not retry indefinitely - since we wait for network, this should not
         // be an issue unless sms in malformed
         if (qEntry.data().retryCnt > NUM_RETRIES) {
-            onProcessEntryDone(qEntry, "FAIL", "Max retries reached (" + NUM_RETRIES + ")");
+            onProcessEntryDoneWNot(qEntry, "FAIL", "Max retries reached (" + NUM_RETRIES + ")");
             return START_NOT_STICKY;
         }
 
@@ -106,9 +106,8 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
     protected void _onServiceStateChanged(ServiceState serviceState) {
         if (serviceState.getState() == ServiceState.STATE_IN_SERVICE) {
             drainQueue(
-                new ProcessResult("OK", "FAIL (check log)"),
-                new ProcessResult(null, null)
-            );
+                new ProcessResult("SUCCESS", "FAIL"),
+                null);
         }
     }
     private class ServiceStateListener
