@@ -140,7 +140,9 @@ public abstract class ABaseFgService<EntryDataT> extends Service
                 mQueue.drainTo(entries);
 
                 final LogFile LOGFILE = LogFile.getInstance(this);
-                LOGFILE.addLogEntry(detail);
+                if (detail != null) {
+                    LOGFILE.addLogEntry(detail);
+                }
 
                 for (int i = 0; i < numEntries; i++) {
                     QueueEntry<EntryDataT> qEntry = entries.get(i);
@@ -148,7 +150,6 @@ public abstract class ABaseFgService<EntryDataT> extends Service
                     if (!processOk) {
                         joinedResultOk = false;
                     }
-
                     // log for every item
                     LOGFILE.addLogEntry(
                         cTitlePrefix + Utils.getDisplayName(this, qEntry.addr)
@@ -159,8 +160,8 @@ public abstract class ABaseFgService<EntryDataT> extends Service
                         mNotHandler.createAndPostNotification(
                 cTitlePrefix + "[multiple]",
                     cStatusPrefix +
-                                (joinedResultOk ? processResult.okStr : "ERROR (check log)"),
-                            joinedResultOk ? detail : null
+                            (joinedResultOk ? processResult.okStr : "ERROR (check log)"),
+                             joinedResultOk ? detail : null
                         );
                     }
                     onProcessEntryDone(qEntry);

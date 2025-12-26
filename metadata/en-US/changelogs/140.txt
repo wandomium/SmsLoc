@@ -1,5 +1,8 @@
 [] Check DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 
+Added permissions:
+[] READ_PHONE_STATE so resend on network alive can work (see #29)
+
 Bugfixes:
 [x] Fix debug print in startForeground (#26)
 
