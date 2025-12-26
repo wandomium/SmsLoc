@@ -163,7 +163,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
     public void onDestroyView()
     {
         // Clean up references to current context/view
-        _listAdapter().clear();
+//        _listAdapter().clear(); leading to IllegalStateException -> dataset changed but not notified
         mListView.setAdapter(null);
         mListView.setOnItemClickListener(null);
         mListView = null;
@@ -203,15 +203,15 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                         LocationRetriever.getLocationWithGPS(LOC_DELAY_MS,
                                 PeopleFragment.this, PeopleFragment.this.requireActivity());
                     }
-                    else if (action.equals(SmsLoc_Intents.ACTION_PERSON_REMOVED)) {
+                    if (action.equals(SmsLoc_Intents.ACTION_PERSON_REMOVED)) {
                         final String addr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);
                         if (addr != null) {
                             mParent.get()._listAdapter().remove(addr);
                         }
                     }
-                    else {
+//                    else {
                         mParent.get()._listAdapter().notifyDataSetChanged();
-                    }
+//                    }
                 }
             }
         });
@@ -243,7 +243,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                         .findViewById(R.id.refresh_people_list)).setRefreshing(false);
                 _listAdapter().mMyLocation = loc;
                 _listAdapter().notifyDataSetChanged();
-            } catch (NullPointerException ignored) {}
+            } catch (NullPointerException ignored) {} //we get callback when view is destroyed
         });
     }
 
