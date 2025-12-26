@@ -16,8 +16,6 @@
  */
 package io.github.wandomium.smsloc;
 
-import android.app.ForegroundServiceStartNotAllowedException;
-import android.app.Notification;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
@@ -71,8 +69,9 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
 
         // create custom service notification
         mServiceNotification = mNotHandler.createOngoigNotification(
-    "Location request", "Waiting for GPS fix",
-                String.format("Timeout is: %s min", mGpsTimeout)
+    "Location request",
+                String.format("Waiting for GPS fix. Timeout is %s min", mGpsTimeout),
+                null
         );
     }
 
@@ -101,13 +100,13 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
         );
 
         // Start foreground service within 5s after call to onStartCommand
-        if (_enqueueRequest(qEntry)) {
+        if (enqueueEntry(qEntry)) {
             if (mQueue.size() == 1) {
                 // if this is the first in queue, start GPS, otherwise we assume it is running
                 mDetails.clear();
                 mCallStatus = "OK";
                 mSmsText = SmsUtils.RESPONSE_CODE + SmsLoc_Common.Consts.GPS_DATA_INVALID_ERR_STR;
-                LocationRetriever.getLocation(
+                LocationRetriever.getLocationWithGPS(
                         (long) mGpsTimeout * Utils.MIN_2_MS, this, this
                 );
             }
@@ -117,14 +116,14 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
 
     // IMPL
     @Override
-    protected boolean _processEntry(QueueEntry<Integer> qEntry) {
+    protected boolean processEntry(QueueEntry<Integer> qEntry) {
         return SmsUtils.sendSms(this, qEntry.addr(), mSmsText);
     }
     // OVERRIDES
     @Override
-    protected void _onStopCommand(QueueEntry<Integer> queueEntry, final String status, final String detail) {
+    protected void onProcessEntryDone(QueueEntry<Integer> queueEntry, final String status, final String detail) {
+        super.onProcessEntryDone(queueEntry, status, detail);
         SmsReceiver.releaseWakeLock(queueEntry.data());
-        super._onStopCommand(queueEntry, status, detail);
     }
 
     // LOCATION RECEIVER
@@ -156,7 +155,7 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
         mSmsText = SmsUtils.RESPONSE_CODE + gpsData.toSmsText();
         // In some bizarre situation where we get crazy amounts of location requests,
         // this could loop forever but it is not a realistic scenario
-        _drainQueue(
+        drainQueue(
             new ProcessResult(mCallStatus, "ERROR"),
             new ProcessResult(
                 mDetails.isEmpty() ? null : mDetails.toString(),

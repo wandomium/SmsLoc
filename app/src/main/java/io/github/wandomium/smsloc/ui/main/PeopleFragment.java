@@ -29,6 +29,7 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -77,6 +78,8 @@ import java.util.Set;
 
 public class PeopleFragment extends ABaseFragment implements LocationRetriever.LocCb
 {
+    private static final String CLASS_TAG = PeopleFragment.class.getSimpleName();
+
     private ListView mListView;
     private ActivityResultLauncher<Intent> mContactPickerLauncher;
 
@@ -120,7 +123,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
         /* Refresh my location */
         ((SwipeRefreshLayout) view.findViewById(R.id.refresh_people_list))
                 .setOnRefreshListener(() -> {
-                    LocationRetriever.getLocation(LOC_DELAY_MS, PeopleFragment.this, requireContext()); //getActivity() may return null here
+                    LocationRetriever.getLocationWithGPS(LOC_DELAY_MS, PeopleFragment.this, requireContext()); //getActivity() may return null here
                 });
 
         /* Whitelist CB */
@@ -174,7 +177,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
         super.onResume();
         // Disable when asking for permissions. To many calls - on every dialog close, etc.
         if (!((MainActivity) requireActivity()).permissionCheckActive()) {
-            LocationRetriever.getLocation(LOC_DELAY_MS, this, requireActivity());
+            LocationRetriever.getLocationWithGPS(LOC_DELAY_MS, this, requireActivity());
         }
     }
 
@@ -188,6 +191,8 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
             @Override
             public void onReceive(Context context, Intent intent) {
                 final String action = intent.getAction();
+                Log.d(CLASS_TAG, "onReceive, Action = " + action);
+
                 if (action != null) {
                     // TODO: check if there is a better place to put this
                     if (action.equals(SmsLoc_Intents.ACTION_SMS_SEND_FAIL)) {
@@ -195,7 +200,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                         return;
                     }
                     if (_listAdapter().mMyLocation == null) {
-                        LocationRetriever.getLocation(LOC_DELAY_MS,
+                        LocationRetriever.getLocationWithGPS(LOC_DELAY_MS,
                                 PeopleFragment.this, PeopleFragment.this.requireActivity());
                     }
                     else if (action.equals(SmsLoc_Intents.ACTION_PERSON_REMOVED)) {

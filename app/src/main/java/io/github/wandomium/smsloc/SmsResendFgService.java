@@ -1,6 +1,5 @@
 package io.github.wandomium.smsloc;
 
-import android.app.Notification;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
@@ -13,7 +12,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
-import androidx.core.app.ServiceCompat;
 
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.ABaseFgService;
@@ -89,25 +87,25 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         // do not retry indefinitely - since we wait for network, this should not
         // be an issue unless sms in malformed
         if (qEntry.data().retryCnt > NUM_RETRIES) {
-            _onStopCommand(qEntry, "FAIL", "Max retries reached (" + NUM_RETRIES + ")");
+            onProcessEntryDone(qEntry, "FAIL", "Max retries reached (" + NUM_RETRIES + ")");
             return START_NOT_STICKY;
         }
 
-        if (!_enqueueRequest(qEntry)) {
+        if (!enqueueEntry(qEntry)) {
             Log.e(CLASS_TAG, "FAILED to start");
         }
         return START_NOT_STICKY;
     }
 
     // IMPL
-    protected boolean _processEntry(QueueEntry<SmsData> qEntry) {
+    protected boolean processEntry(QueueEntry<SmsData> qEntry) {
         return SmsUtils.sendSms(this, qEntry.addr(), qEntry.data().msg, qEntry.data().retryCnt);
     }
 
     // SERVICE STATE MONITORING
     protected void _onServiceStateChanged(ServiceState serviceState) {
         if (serviceState.getState() == ServiceState.STATE_IN_SERVICE) {
-            _drainQueue(
+            drainQueue(
                 new ProcessResult("OK", "FAIL (check log)"),
                 new ProcessResult(null, null)
             );

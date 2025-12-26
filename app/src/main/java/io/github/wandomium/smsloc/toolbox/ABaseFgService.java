@@ -40,7 +40,7 @@ public abstract class ABaseFgService<EntryDataT> extends Service
     public record ProcessResult(String okStr, String failStr){
         String getString(boolean resultOK) { return resultOK ? okStr : failStr;}
     };
-    protected abstract boolean  _processEntry(QueueEntry<EntryDataT> qEntry);
+    protected abstract boolean processEntry(QueueEntry<EntryDataT> qEntry);
 
     @Override
     public void onCreate()
@@ -80,18 +80,19 @@ public abstract class ABaseFgService<EntryDataT> extends Service
     public IBinder onBind(Intent intent) { return null; }
 
 
-    protected void _onStopCommand(QueueEntry<EntryDataT> qEntry, final String status, final String detail) {
+    protected void onProcessEntryDone(QueueEntry<EntryDataT> qEntry, final String status, final String detail) {
         Log.d(CLASS_TAG, "_onStopCommand");
-        mNotHandler.createAndPostNotification(
+        int notId = mNotHandler.createAndPostNotification(
     cTitlePrefix + Utils.getDisplayName(this, qEntry.addr),
          cStatusPrefix + status,
                 detail
         );
 
         stopSelf(qEntry.startId);
+        Log.d(CLASS_TAG, "notid " + notId);
     }
 
-    protected boolean _enqueueRequest(QueueEntry<EntryDataT> qEntry) {
+    protected boolean enqueueEntry(QueueEntry<EntryDataT> qEntry) {
         if (mServiceNotification == null) {
             // create a dummy notification
             mServiceNotification = mNotHandler.createOngoigNotification(
@@ -107,7 +108,7 @@ public abstract class ABaseFgService<EntryDataT> extends Service
         }
         catch (Exception e) {
             // security exceptions mostly
-            _onStopCommand(qEntry, "FAIL", "Could not start service (check log)");
+            onProcessEntryDone(qEntry, "FAIL", "Could not start service (check log)");
             LogFile.getInstance(this).addLogEntry(_getExceptionString(e));
             return false;
         }
@@ -116,22 +117,22 @@ public abstract class ABaseFgService<EntryDataT> extends Service
         if (!mQueue.offer(qEntry)) {
             // should really not get here in normal operation
             // TODO: limit queue size?
-            _onStopCommand(qEntry, "FAIL", "queue full");
+            onProcessEntryDone(qEntry, "FAIL", "queue full");
             return false;
         }
         return true;
     }
 
-    protected void _drainQueue(final ProcessResult status, final ProcessResult detail)
+    protected void drainQueue(final ProcessResult status, final ProcessResult detail)
     {
         while(mQueue != null && !mQueue.isEmpty()) {
             ArrayList<QueueEntry<EntryDataT>> entries = new ArrayList<>(mQueue.size());
             mQueue.drainTo(entries);
 
-            for (QueueEntry<EntryDataT> queueEntry : entries) {
-                final boolean processOk = _processEntry(queueEntry);
-                _onStopCommand(
-                        queueEntry,
+            for (QueueEntry<EntryDataT> qEntry : entries) {
+                final boolean processOk = processEntry(qEntry);
+                onProcessEntryDone(
+                        qEntry,
                         status.getString(processOk),
                         detail.getString(processOk)
                 );

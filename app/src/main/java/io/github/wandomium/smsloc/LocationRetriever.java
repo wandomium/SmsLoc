@@ -36,6 +36,9 @@ import java.util.function.Consumer;
 import io.github.wandomium.smsloc.data.file.LogFile;
 
 @SuppressLint("MissingPermission")
+/**
+ * Single use class for retrieving location
+ */
 public class LocationRetriever implements Consumer<Location>, LocationListener
 {
     private final static String CLASS_TAG = LocationRetriever.class.getSimpleName();
@@ -62,7 +65,7 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
 
     /** Executes one call to getLocations and then terminates
      */
-    public static void getLocation(long delay_ms, @NonNull LocCb cb, @NonNull Context ctx) {
+    public static void getLocationWithGPS(long delay_ms, @NonNull LocCb cb, @NonNull Context ctx) {
         new LocationRetriever(cb, ctx)._getLocation(delay_ms, LocationManager.GPS_PROVIDER);
     }
 
@@ -112,7 +115,7 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
         // LocationRequest.Builder locRequest = new LocationRequest.Builder(0).setDurationMillis(delay_ms).set;
 
         try {
-            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT <= 29) {
                 // this one waits for MAX_SINGLE_LOCATION_TIMEOUT_MS = 30 * 1000. We want control over wait time
                 // locMngr.requestSingleUpdate(provider, this, null);
                 locMngr.requestLocationUpdates(provider, 1000, 500, this);
