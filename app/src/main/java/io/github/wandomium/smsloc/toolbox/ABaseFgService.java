@@ -11,7 +11,6 @@ import androidx.annotation.Nullable;
 import androidx.core.app.ServiceCompat;
 
 import java.util.ArrayList;
-import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
@@ -19,6 +18,7 @@ import io.github.wandomium.smsloc.defs.SmsLoc_Common;
 
 public abstract class ABaseFgService<EntryDataT> extends Service
 {
+    @SuppressWarnings("unused")
     private final static String CLASS_TAG = ABaseFgService.class.getSimpleName();
 
     protected final String cTitlePrefix;
@@ -37,12 +37,14 @@ public abstract class ABaseFgService<EntryDataT> extends Service
     protected NotificationHandler mNotHandler;
     protected Notification mServiceNotification;
 
-    public record QueueEntry<EntryDataT>(int startId, String addr, EntryDataT data){};
+    public record QueueEntry<EntryDataT>(int startId, String addr, EntryDataT data){}
+
     protected LinkedBlockingQueue<QueueEntry<EntryDataT>> mQueue;
 
     public record ProcessResult(String okStr, String failStr){
         String getString(boolean resultOK) { return resultOK ? okStr : failStr;}
-    };
+    }
+
     protected abstract boolean processEntry(QueueEntry<EntryDataT> qEntry);
 
     @Override
@@ -82,11 +84,10 @@ public abstract class ABaseFgService<EntryDataT> extends Service
     @Override
     public IBinder onBind(Intent intent) { return null; }
 
-    protected void onProcessAbort(QueueEntry<EntryDataT> qEntry, final String status, final String detail) {
+    protected void onStartFailed(QueueEntry<EntryDataT> qEntry, final String reason) {
         mNotHandler.createAndPostNotification(
     cTitlePrefix + Utils.getDisplayName(this, qEntry.addr),
-         cStatusPrefix + status,
-                detail
+         cStatusPrefix + "start FAILED", reason
         );
 
         onProcessEntryDone(qEntry);
@@ -110,7 +111,7 @@ public abstract class ABaseFgService<EntryDataT> extends Service
         }
         catch (Exception e) {
             // security exceptions mostly
-            onProcessAbort(qEntry, "FAIL", "Could not start service (check log)");
+            onStartFailed(qEntry, "Could not start service (check log)");
             LogFile.getInstance(this).addLogEntry(_getExceptionString(e));
             return false;
         }
@@ -119,7 +120,7 @@ public abstract class ABaseFgService<EntryDataT> extends Service
         if (!mQueue.offer(qEntry)) {
             // should really not get here in normal operation
             // TODO: limit queue size?
-            onProcessAbort(qEntry, "FAIL", "queue full");
+            onStartFailed(qEntry, "queue full");
             return false;
         }
         return true;
@@ -204,7 +205,7 @@ public abstract class ABaseFgService<EntryDataT> extends Service
     /** SecurityException because of permission issues, or
      * ForegroundServiceStartNotAllowedException (android 10 and later)
      * Or due to missing/invalid fg service types
-     * https://developer.android.com/develop/background-work/services/foreground-services (v12 - API31)
+     * <a href="https://developer.android.com/develop/background-work/services/foreground-services">...</a> (v12 - API31)
      */
     protected static String _getExceptionString(Exception e) {
         if (Build.VERSION.SDK_INT >= 31 && e instanceof ForegroundServiceStartNotAllowedException) {

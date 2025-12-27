@@ -29,8 +29,6 @@ import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import io.github.wandomium.smsloc.R;
 
 import io.github.wandomium.smsloc.MainActivity;

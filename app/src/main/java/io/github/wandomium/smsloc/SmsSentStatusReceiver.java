@@ -1,28 +1,21 @@
 package io.github.wandomium.smsloc;
 
 import android.app.Activity;
-import android.app.ForegroundServiceStartNotAllowedException;
-import android.app.Notification;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
-import android.provider.Telephony;
 import android.telephony.SmsManager;
 import android.widget.Toast;
 
-import androidx.annotation.RequiresApi;
-
 import io.github.wandomium.smsloc.data.file.LogFile;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
-import io.github.wandomium.smsloc.toolbox.NotificationHandler;
 import io.github.wandomium.smsloc.ui.dialogs.SmsSendFailDialog;
 
 public class SmsSentStatusReceiver extends BroadcastReceiver
 {
+    @SuppressWarnings("unused")
     private static final String CLASS_TAG = SmsSentStatusReceiver.class.getSimpleName();
 
     private static int sRequestCode = 0;
@@ -56,7 +49,12 @@ public class SmsSentStatusReceiver extends BroadcastReceiver
 
         /// ////////
         // RESPONSE: need to be resent ALWAYS!
-        final Boolean isResponseSms = SmsUtils.isResponseSms(intent.getStringExtra(SmsLoc_Intents.EXTRA_MSG));
+        final String msg = intent.getStringExtra(SmsLoc_Intents.EXTRA_MSG);
+        final Boolean isResponseSms = SmsUtils.isResponseSms(msg);
+        if (isResponseSms == null) {
+            LOGFILE.addLogEntry("BUG - please report this: not our sms. Msg= " + msg);
+            return;
+        }
         if (isResponseSms) try {
             // Retries when network comes back. No need to panic. If all resend attempts fail,
             // user will be notified in foreground service

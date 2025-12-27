@@ -16,7 +16,6 @@
  */
 package io.github.wandomium.smsloc;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.location.Location;
 import android.location.LocationListener;
@@ -26,18 +25,15 @@ import android.os.CancellationSignal;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import java.util.Timer;
 import java.util.TimerTask; //TODO: TimerTask will never become a demon. keeps alive
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
 
-@SuppressLint("MissingPermission")
 /**
  * Single use class for retrieving location
  */

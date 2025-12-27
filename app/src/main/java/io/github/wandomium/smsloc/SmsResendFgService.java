@@ -13,8 +13,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
-import java.util.concurrent.Executor;
-
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.ABaseFgService;
 
@@ -22,7 +20,7 @@ import io.github.wandomium.smsloc.toolbox.ABaseFgService;
  * Used for resending response SMS when network is unavailable.
  * It waits until the network comes back up and resends the SMS.
  * It retries this max NUM_TRIES
- *
+ * <p>
  * (Could also be used for sending requests but those are currently handled
  * via SmsSendFailDialog class.
  */
@@ -35,7 +33,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
     public static final int NUM_RETRIES = 3;
 
 
-    public record SmsData(String msg, int retryCnt){};
+    public record SmsData(String msg, int retryCnt){}
 
     private final static String TITLE_PREFIX = "Resend SMS to ";
     private final static String STATUS_PREFIX = "";
@@ -45,7 +43,11 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
     public SmsResendFgService() {
 //        final boolean isResponse = SmsUtils.isResponseSms(qEntry.data().msg);
 //        return "Resend " + (isResponse ? "response" : "request") + " to ";
-        super(TITLE_PREFIX, STATUS_PREFIX, NOT_ID, ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING);
+        super(TITLE_PREFIX, STATUS_PREFIX, NOT_ID,
+                (Build.VERSION.SDK_INT < 34) ?
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_NONE :
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING
+                );
     }
 
     @Override
@@ -91,7 +93,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         // do not retry indefinitely - since we wait for network, this should not
         // be an issue unless sms in malformed
         if (qEntry.data().retryCnt > NUM_RETRIES) {
-            onProcessAbort(qEntry, "FAIL", "Max retries reached (" + NUM_RETRIES + ")");
+            onStartFailed(qEntry, "Max retries reached (" + NUM_RETRIES + ")");
             return START_NOT_STICKY;
         }
 

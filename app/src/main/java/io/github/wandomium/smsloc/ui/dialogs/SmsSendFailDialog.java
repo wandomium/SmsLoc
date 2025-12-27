@@ -6,6 +6,7 @@ import android.content.Intent;
 import androidx.appcompat.app.AlertDialog;
 
 import io.github.wandomium.smsloc.SmsUtils;
+import io.github.wandomium.smsloc.data.file.LogFile;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.NotificationHandler;
 import io.github.wandomium.smsloc.toolbox.Utils;
@@ -45,6 +46,11 @@ public class SmsSendFailDialog
 
         final String displayName = Utils.getDisplayName(ctx, addr);
         final Boolean isResponse = SmsUtils.isResponseSms(msg);
+
+        if (isResponse == null) {
+            LogFile.getInstance(ctx).addLogEntry("BUG = please report this: not our message: " + msg);
+            return "ERROR (check log)" + displayName;
+        }
 
         return (isResponse ? "Response to " : "Request to ") + displayName;
     }

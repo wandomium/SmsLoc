@@ -18,7 +18,6 @@ package io.github.wandomium.smsloc;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.Intent;
 import android.os.Build;
 import android.telephony.SmsManager;
 import android.telephony.SubscriptionManager;
@@ -34,7 +33,6 @@ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import java.util.Locale;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
-import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 
 public class SmsUtils

@@ -31,11 +31,10 @@ import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 import io.github.wandomium.smsloc.toolbox.Utils;
 
 import java.util.ArrayList;
-import java.util.concurrent.Executor;
 
 /**
  * Used to get GPS location when SMS request comes in
- *
+ <p>
  * EntryDataT = Integer and represents wakeLockId
  * it can be retrieved with call to QueueEntry.data()
  */
@@ -158,11 +157,9 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
         mSmsText = SmsUtils.RESPONSE_CODE + gpsData.toSmsText();
         // In some bizarre situation where we get crazy amounts of location requests,
         // this could loop forever but it is not a realistic scenario
-        getMainExecutor().execute(() -> {
-                drainQueue(
-                    new ProcessResult(mCallStatus, "Sms send ERROR"),
-                    mDetails.isEmpty() ? null : mDetails.toString());
-                });
+        getMainExecutor().execute(() -> drainQueue(
+            new ProcessResult(mCallStatus, "Sms send ERROR"),
+            mDetails.isEmpty() ? null : mDetails.toString()));
         // TODO-low my location update intent
     }
 }
