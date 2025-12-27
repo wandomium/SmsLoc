@@ -15,6 +15,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
+import io.github.wandomium.smsloc.defs.SmsLoc_Common;
 
 public abstract class ABaseFgService<EntryDataT> extends Service
 {
@@ -124,67 +125,79 @@ public abstract class ABaseFgService<EntryDataT> extends Service
         return true;
     }
 
-    protected void drainQueue(final ProcessResult processResult, final String detail, Executor executor)
+    protected void drainQueue(final ProcessResult processResult, final String detail)
     {
         while(mQueue != null && !mQueue.isEmpty()) {
+            // drain the queue
             final int numEntries = mQueue.size();
             ArrayList<QueueEntry<EntryDataT>> entries = new ArrayList<>(numEntries);
             mQueue.drainTo(entries);
 
             final String title = cTitlePrefix +
-               (numEntries == 1 ? Utils.getDisplayName(this, entries.get(0).addr) : "[multiple]");
+               (numEntries == 1 ? Utils.getDisplayName(this, entries.get(0).addr) : "multiple (" + numEntries + ")");
 
             if (numEntries == 1) {
-                final boolean processOk = processEntry(entries.get(0));
+                final QueueEntry<EntryDataT> qEntry = entries.get(0);
+                final boolean processOk = processEntry(qEntry);
                 getMainExecutor().execute(() -> {
-                    final Notification not = mNotHandler
-                        .createNotification(title,
-                            cStatusPrefix + processResult.getString(processOk), detail);
-                    // final notification
-                    startForeground(cNotId, not);
-                    stopForeground(STOP_FOREGROUND_DETACH);});
-                    onProcessEntryDone(entries.get(0));
+                    _postFinalNotification(title, processResult, detail, processOk);
+                    onProcessEntryDone(qEntry);
+                });
             }
             else {
-                boolean joinedResultOk = true;
-
+                // log details
                 final LogFile LOGFILE = LogFile.getInstance(this);
-                if (detail != null) {
-                    LOGFILE.addLogEntry(detail);
-                }
+
+                final ProcessResult procResultCombined = new ProcessResult(
+                        processResult.okStr, "ERROR (check log)"
+                );
+                boolean procOkCombined = true;
 
                 for (int i = 0; i < numEntries; i++) {
                     final QueueEntry<EntryDataT> qEntry = entries.get(i);
                     final boolean processOk = processEntry(qEntry); //this one already logs
                     if (!processOk) {
-                        joinedResultOk = false;
+                        procOkCombined = false;
                     }
 
                     // log for every item
                     LOGFILE.addLogEntry(
-                        cTitlePrefix + Utils.getDisplayName(this, qEntry.addr)
-                            + ": " + cStatusPrefix + processResult.getString(processOk)
+                        String.format(
+                            SmsLoc_Common.LOCALE, "[multiple %d/%d] - %s: %s ",
+                         i+1, numEntries,
+                                Utils.getDisplayName(this, qEntry.addr),
+                                cStatusPrefix + processResult.getString(processOk))
                     );
 
                     // notify only for last item
                     if (i == numEntries - 1) {
-                        boolean finalJoinedResultOk = joinedResultOk;
-                        getMainExecutor().execute(() -> {
-                            final Notification not = mNotHandler.createNotification(
-                                    title,
-                                    cStatusPrefix + (finalJoinedResultOk ? processResult.okStr : "ERROR (check log)"),
-                                    finalJoinedResultOk ? detail : null
-                            );
-                            // final notification
-                            startForeground(cNotId, not);
-                            stopForeground(STOP_FOREGROUND_DETACH);
-                        });
+                        final boolean procOkCombFinal = procOkCombined;
+                        getMainExecutor().execute(() ->
+                            _postFinalNotification(title, procResultCombined, detail, procOkCombFinal)
+                        );
                     }
                     getMainExecutor().execute(() -> onProcessEntryDone(qEntry));
                     // IMPORTANT: onDestroy can get called here,
                     // queue & nothandler can become null!!!
                 }
             }
+        }
+    }
+
+    private void _postFinalNotification(final String title,
+                final ProcessResult procResult, final String detail, final boolean procOk) {
+        final Notification not = mNotHandler.createNotification(
+                title,
+         cStatusPrefix + procResult.getString(procOk),
+                procOk ? detail : null); //do not post detail on fail, can be confusing
+
+        // final notification
+        startForeground(cNotId, not);
+        stopForeground(STOP_FOREGROUND_DETACH);
+
+        // if detail was not posted log it
+        if (!procOk && detail != null) {
+            LogFile.getInstance(this).addLogEntry(title + ": " + detail);
         }
     }
 

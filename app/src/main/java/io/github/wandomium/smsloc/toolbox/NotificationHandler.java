@@ -201,11 +201,8 @@ public class NotificationHandler
         return builder.build();
     }
 
-    protected final void restartNotifications() {
-        LogFile.getInstance(mAppContext).addLogEntry("restartNotifications");
-        synchronized (this) {
-            mGroupingNotification = null;
-        }
+    public synchronized final void restartNotifications() {
+        mGroupingNotification = null;
     }
     public static class NotGroupClearedRcv extends BroadcastReceiver
     {

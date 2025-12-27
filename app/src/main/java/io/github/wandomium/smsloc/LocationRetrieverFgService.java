@@ -161,7 +161,7 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
         getMainExecutor().execute(() -> {
                 drainQueue(
                     new ProcessResult(mCallStatus, "Sms send ERROR"),
-                    mDetails.isEmpty() ? null : mDetails.toString(), getMainExecutor());
+                    mDetails.isEmpty() ? null : mDetails.toString());
                 });
         // TODO-low my location update intent
     }

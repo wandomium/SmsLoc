@@ -107,11 +107,11 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
     }
 
     // SERVICE STATE MONITORING
-    protected void _onServiceStateChanged(ServiceState serviceState, Executor executor) {
+    protected void _onServiceStateChanged(ServiceState serviceState) {
         if (serviceState.getState() == ServiceState.STATE_IN_SERVICE) {
             drainQueue(
                 new ProcessResult("SUCCESS", "FAIL"),
-                null, executor);
+                null);
         }
     }
     private class ServiceStateListener
@@ -119,11 +119,9 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         private final TelephonyManager cTelMngr;
         private final Legacy cLegacy;
         private final Modern cModern;
-        private final Executor cExecutor;
 
         public ServiceStateListener() {
             cTelMngr = (TelephonyManager) getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
-            cExecutor = getMainExecutor();
 
             if (Build.VERSION.SDK_INT < 31) {
                 cLegacy = new Legacy();
@@ -139,7 +137,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
             if (Build.VERSION.SDK_INT < 31) {
                 cTelMngr.listen(cLegacy, PhoneStateListener.LISTEN_SERVICE_STATE);
             } else {
-                cTelMngr.registerTelephonyCallback(cExecutor, cModern);
+                cTelMngr.registerTelephonyCallback(getMainExecutor(), cModern);
             }
         }
 
@@ -155,7 +153,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         private class Legacy extends PhoneStateListener {
             @Override
             public void onServiceStateChanged(ServiceState serviceState) {
-                SmsResendFgService.this._onServiceStateChanged(serviceState, cExecutor);
+                SmsResendFgService.this._onServiceStateChanged(serviceState);
             }
         }
 
@@ -163,7 +161,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         private class Modern extends TelephonyCallback implements TelephonyCallback.ServiceStateListener {
             @Override
             public void onServiceStateChanged(@NonNull ServiceState serviceState) {
-                SmsResendFgService.this._onServiceStateChanged(serviceState, cExecutor);
+                SmsResendFgService.this._onServiceStateChanged(serviceState);
             }
         }
     }
