@@ -199,7 +199,7 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
                     SmsUtils.RESPONSE_CODE + SmsLoc_Common.Consts.GPS_DATA_INVALID_ERR_STR);
                 _releaseCurrentWakeLock();
             }
-            
+
             return SmsLoc_Intents.ACTION_REQUEST_RCVD;
         }
         else {

@@ -30,7 +30,7 @@ public class SmsSentStatusReceiver extends BroadcastReceiver
 
         final String displayName = Utils.getDisplayName(context, intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR));
         if (getResultCode() == Activity.RESULT_OK) {
-            final String status = displayName + ": SMS sent";
+            final String status = displayName + ": SMS send SUCCESS";
             LOGFILE.addLogEntry(status);
             Toast.makeText(APPCTX, status, Toast.LENGTH_LONG).show();
             return;
