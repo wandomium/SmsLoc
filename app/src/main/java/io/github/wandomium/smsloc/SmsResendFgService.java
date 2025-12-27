@@ -12,6 +12,10 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.core.app.ServiceCompat;
+import androidx.core.content.ContextCompat;
+
+import java.util.concurrent.Executor;
 
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.ABaseFgService;
@@ -93,6 +97,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         // do not retry indefinitely - since we wait for network, this should not
         // be an issue unless sms in malformed
         if (qEntry.data().retryCnt > NUM_RETRIES) {
+            ServiceCompat.startForeground(this, cNotId, mServiceNotification, ServiceInfo.FOREGROUND_SERVICE_TYPE_NONE);
             onStartFailed(qEntry, "Max retries reached (" + NUM_RETRIES + ")");
             return START_NOT_STICKY;
         }
@@ -110,9 +115,10 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
 
     // SERVICE STATE MONITORING
     protected void _onServiceStateChanged(ServiceState serviceState) {
+        Log.d("TEST", "Current State: " + serviceState.getState() + " (0=InService, 1=OutOfService, 3=PowerOff)");
         if (serviceState.getState() == ServiceState.STATE_IN_SERVICE) {
             drainQueue(
-                new ProcessResult("SUCCESS", "FAIL"),
+                new ProcessResult("OK", "FAIL"),
                 null);
         }
     }
@@ -126,7 +132,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
             cTelMngr = (TelephonyManager) getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
 
             if (Build.VERSION.SDK_INT < 31) {
-                cLegacy = new Legacy();
+                cLegacy = new Legacy(ContextCompat.getMainExecutor(SmsResendFgService.this));
                 cModern = null;
             }
             else {
@@ -153,6 +159,9 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         }
 
         private class Legacy extends PhoneStateListener {
+            Legacy(Executor executor) {
+                super(executor);
+            }
             @Override
             public void onServiceStateChanged(ServiceState serviceState) {
                 SmsResendFgService.this._onServiceStateChanged(serviceState);

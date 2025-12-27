@@ -11,6 +11,7 @@ import android.widget.Toast;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
+import io.github.wandomium.smsloc.toolbox.Utils;
 import io.github.wandomium.smsloc.ui.dialogs.SmsSendFailDialog;
 
 public class SmsSentStatusReceiver extends BroadcastReceiver
@@ -27,15 +28,16 @@ public class SmsSentStatusReceiver extends BroadcastReceiver
         final LogFile LOGFILE = LogFile.getInstance(context);
         final Context APPCTX = context.getApplicationContext();
 
+        final String displayName = Utils.getDisplayName(context, intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR));
         if (getResultCode() == Activity.RESULT_OK) {
-            final String status = "SMS sent";
+            final String status = displayName + ": SMS sent";
             LOGFILE.addLogEntry(status);
             Toast.makeText(APPCTX, status, Toast.LENGTH_LONG).show();
             return;
         }
 
         // Send failed
-        final String status = "SMS send FAIL";
+        final String status = displayName + ": SMS send FAIL";
         final String detail = switch (getResultCode()) {
             case SmsManager.RESULT_ERROR_NO_SERVICE -> "no service";
             case SmsManager.RESULT_ERROR_NULL_PDU -> "null PDU error";
