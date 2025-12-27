@@ -16,7 +16,6 @@
  */
 package io.github.wandomium.smsloc;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.location.Location;
 import android.location.LocationListener;
@@ -26,6 +25,7 @@ import android.os.CancellationSignal;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.core.location.LocationListenerCompat;
 
 import java.util.Timer;
 import java.util.TimerTask; //TODO: TimerTask will never become a demon. keeps alive
@@ -35,9 +35,13 @@ import java.util.function.Consumer;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
 
-@SuppressLint("MissingPermission")
-public class LocationRetriever implements Consumer<Location>, LocationListener
+/**
+ * Single use class for retrieving location
+ */
+public class LocationRetriever implements Consumer<Location>, LocationListenerCompat
 {
+    private final static String CLASS_TAG = LocationRetriever.class.getSimpleName();
+
     private Timer mToutTimer;
     private LocCb mLocCb;
 
@@ -60,7 +64,7 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
 
     /** Executes one call to getLocations and then terminates
      */
-    public static void getLocation(long delay_ms, @NonNull LocCb cb, @NonNull Context ctx) {
+    public static void getLocationWithGPS(long delay_ms, @NonNull LocCb cb, @NonNull Context ctx) {
         new LocationRetriever(cb, ctx)._getLocation(delay_ms, LocationManager.GPS_PROVIDER);
     }
 
@@ -110,7 +114,7 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
         // LocationRequest.Builder locRequest = new LocationRequest.Builder(0).setDurationMillis(delay_ms).set;
 
         try {
-            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT <= 29) {
                 // this one waits for MAX_SINGLE_LOCATION_TIMEOUT_MS = 30 * 1000. We want control over wait time
                 // locMngr.requestSingleUpdate(provider, this, null);
                 locMngr.requestLocationUpdates(provider, 1000, 500, this);
@@ -143,25 +147,28 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
     // Update with new location and clear all references
     private void _finishCall(Location location, String msg)
     {
+        Log.d(CLASS_TAG, "_finishCall");
         // For API29: Handles a race condition when timer expires but we get a
         // location update before we manage to call removeUpdates
         if (mCallFinished) {
-            Log.d("LocationRetriever", "double call of _callFinished");
+            Log.d("LocationRetriever", "double call of _callFinished, " + msg);
             return;
         }
         mCallFinished = true;
 
         mToutTimer.cancel();
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT <= 29) {
             ((LocationManager) mCtx.getSystemService(Context.LOCATION_SERVICE)).removeUpdates(this);
         }
         else {
             mCancelSignal.cancel();
         }
 
+        Log.d(CLASS_TAG, "location callback");
         mLocCb.onLocationRcvd(location, msg);
 
-        mExecutor.shutdownNow();
+//        mExecutor.shutdownNow();
+        mExecutor.shutdown();
 
         // null all references to avoid dangling
         mCancelSignal = null;

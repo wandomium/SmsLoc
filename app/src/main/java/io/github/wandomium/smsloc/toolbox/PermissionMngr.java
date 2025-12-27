@@ -66,7 +66,8 @@ public class PermissionMngr
         NOTIFICATION(0,  new String[]{Manifest.permission.POST_NOTIFICATIONS},-1), //implicitly granted on API<33 but we only call this once at app startup so it does not matter
         SMS(1,           new String[]{Manifest.permission.SEND_SMS, Manifest.permission.RECEIVE_SMS}, R.string.per_sms_rationale),
         FINE_LOCATION(2, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, R.string.per_loc_rationale),
-        BG_LOCATION(3,   new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, -1);
+        BG_LOCATION(3,   new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, -1),
+        PHONE_STATE(4,   new String[]{Manifest.permission.READ_PHONE_STATE}, R.string.per_phone_rationale);
 
         final int code;
         final String[] list;

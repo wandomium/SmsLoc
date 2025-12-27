@@ -29,6 +29,7 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -65,12 +66,10 @@ import io.github.wandomium.smsloc.ui.dialogs.PersonActionDialogFragment;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.Utils;
+import io.github.wandomium.smsloc.ui.dialogs.SmsSendFailDialog;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
 
@@ -79,6 +78,8 @@ import java.util.Set;
 
 public class PeopleFragment extends ABaseFragment implements LocationRetriever.LocCb
 {
+    private static final String CLASS_TAG = PeopleFragment.class.getSimpleName();
+
     private ListView mListView;
     private ActivityResultLauncher<Intent> mContactPickerLauncher;
 
@@ -122,7 +123,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
         /* Refresh my location */
         ((SwipeRefreshLayout) view.findViewById(R.id.refresh_people_list))
                 .setOnRefreshListener(() -> {
-                    LocationRetriever.getLocation(LOC_DELAY_MS, PeopleFragment.this, requireContext()); //getActivity() may return null here
+                    LocationRetriever.getLocationWithGPS(LOC_DELAY_MS, PeopleFragment.this, requireContext()); //getActivity() may return null here
                 });
 
         /* Whitelist CB */
@@ -162,7 +163,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
     public void onDestroyView()
     {
         // Clean up references to current context/view
-        _listAdapter().clear();
+//        _listAdapter().clear(); leading to IllegalStateException -> dataset changed but not notified
         mListView.setAdapter(null);
         mListView.setOnItemClickListener(null);
         mListView = null;
@@ -176,7 +177,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
         super.onResume();
         // Disable when asking for permissions. To many calls - on every dialog close, etc.
         if (!((MainActivity) requireActivity()).permissionCheckActive()) {
-            LocationRetriever.getLocation(LOC_DELAY_MS, this, requireActivity());
+            LocationRetriever.getLocationWithGPS(LOC_DELAY_MS, this, requireActivity());
         }
     }
 
@@ -186,13 +187,20 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
         mReceiverList.add(new ABaseBrdcstRcv<>(PeopleFragment.this,
                 new String[]{SmsLoc_Intents.ACTION_REQUEST_SENT, SmsLoc_Intents.ACTION_RESPONSE_RCVD,
                         SmsLoc_Intents.ACTION_NEW_LOCATION, SmsLoc_Intents.ACTION_DAY_DATA_CLR,
-                        SmsLoc_Intents.ACTION_PERSON_REMOVED}) {
+                        SmsLoc_Intents.ACTION_PERSON_REMOVED, SmsLoc_Intents.ACTION_SMS_SEND_FAIL}) {
             @Override
             public void onReceive(Context context, Intent intent) {
                 final String action = intent.getAction();
+                Log.d(CLASS_TAG, "onReceive, Action = " + action);
+
                 if (action != null) {
+                    // TODO: check if there is a better place to put this
+                    if (action.equals(SmsLoc_Intents.ACTION_SMS_SEND_FAIL)) {
+                        SmsSendFailDialog.showDialog(context, intent);
+                        return;
+                    }
                     if (_listAdapter().mMyLocation == null) {
-                        LocationRetriever.getLocation(LOC_DELAY_MS,
+                        LocationRetriever.getLocationWithGPS(LOC_DELAY_MS,
                                 PeopleFragment.this, PeopleFragment.this.requireActivity());
                     }
                     if (action.equals(SmsLoc_Intents.ACTION_PERSON_REMOVED)) {
@@ -201,9 +209,9 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                             mParent.get()._listAdapter().remove(addr);
                         }
                     }
-                    else {
+//                    else {
                         mParent.get()._listAdapter().notifyDataSetChanged();
-                    }
+//                    }
                 }
             }
         });
@@ -235,7 +243,7 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                         .findViewById(R.id.refresh_people_list)).setRefreshing(false);
                 _listAdapter().mMyLocation = loc;
                 _listAdapter().notifyDataSetChanged();
-            } catch (NullPointerException ignored) {}
+            } catch (NullPointerException ignored) {} //we get callback when view is destroyed
         });
     }
 
@@ -290,6 +298,10 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
         // Prevent duplicates
         @Override
         public void add(String addr) {
+            if (addr == null) {
+                Log.e(CLASS_TAG, "adding null address to list");
+                return;
+            }
             if (mUniqueList.add(addr)) { super.add(addr); }
         }
         @Override
@@ -328,34 +340,8 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
                 holder.mPersonIcon.setText(person.getInitials());
             }
 
-            int color = Color.GRAY;
-            String text = "No location data";
-
-            if (locData != null)
-            {
-                if (locData.locationUpToDate())    { color = Color.rgb(39,204,44); }
-                else if (locData.requestPending())      { color = Color.rgb(255,174,66); }
-                else if (!locData.lastResponseValid())  { color = Color.RED; }
-
-                if (locData.getLastValidLocation() != null) {
-                    final long utc = locData.getLastValidLocation().utc;
-
-                    text = String.format("Last valid location: %s\n\tElapsed: %s\n",
-                            new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.GERMAN).format(new Date(utc)),
-                            Utils.timeToNowStr(locData.getLastValidLocation().utc));
-
-                    Float distance = null;
-                    if (mMyLocation != null) {
-                        distance = locData.getLastValidLocation().distanceFrom(mMyLocation);
-                    }
-                    text +=
-                        (distance == null) ?
-                            String.format(SmsLoc_Common.LOCALE, "\tDistance: %s", "Get My Loc Failed") //locRetriever.getInvalidLocReasonSimple())
-                          : String.format(SmsLoc_Common.LOCALE, "\tDistance: %.4f km", distance/1000.0);
-                }
-            }
-
             /* gps status icon */
+            final int color = _getIconColor(locData);
             final Drawable statusIcon = ResourcesCompat.getDrawable(parent.getResources(), R.drawable.ic_location_marker_24, null);
             if (statusIcon != null) {
                 statusIcon.setColorFilter(new BlendModeColorFilter(color, BlendMode.SRC_ATOP));
@@ -366,9 +352,49 @@ public class PeopleFragment extends ABaseFragment implements LocationRetriever.L
             }
 
             /* detail text */
+            final String text = _getLocationText(locData);
             ((ViewHolder)convertView.getTag()).mText.setText(String.format("%s\n%s", person.getDisplayName(), text));
 
             return convertView;
+        }
+
+        private int _getIconColor(SmsLocData locData)
+        {
+            if (locData == null) {
+                return Color.GRAY;
+            }
+            if (!locData.requestPending() && !locData.hasLocationData()) {
+                // we only received requests from this person
+                return Color.GRAY;
+            }
+            if (locData.locationUpToDate()) {
+                return Color.rgb(39,204,44);
+            }
+            if (locData.requestPending()) {
+                return Color.rgb(255,174,66);
+            }
+            if (!locData.lastResponseValid()) {
+                return Color.RED;
+            }
+            return Color.GRAY;
+        }
+
+        private String _getLocationText(SmsLocData locData) {
+            String text = "No location data";
+            if (locData != null && locData.getLastValidLocation() != null) {
+                text = String.format("Last valid location: %s\n\tElapsed: %s\n",
+                        Utils.msToStr(locData.getLastValidLocation().utc),
+                        Utils.timeToNowStr(locData.getLastValidLocation().utc));
+
+                Float distance = null;
+                if (mMyLocation != null) {
+                    distance = locData.getLastValidLocation().distanceFrom(mMyLocation);
+                }
+                text += (distance == null) ?
+                        "\tDistance: Get My Loc Failed" //locRetriever.getInvalidLocReasonSimple())
+                      : String.format(SmsLoc_Common.LOCALE, "\tDistance: %.4f km", distance/1000.0);
+            }
+            return text;
         }
     }
 }

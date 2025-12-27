@@ -1,0 +1,12 @@
+Added permissions:
+[x] READ_PHONE_STATE so resend on network alive can work (see #29)
+
+Bugfixes:
+[x] Fix debug print in startForeground (#26)
+[x] Back pressed was ignored
+
+Enhancements:
+[x] Treat anything but 'Activity.RESULT_OK' as SMS sent error (#27)
+      - Responses: Retry sending SMS automatically (#29) -> waits for network and resends the sms
+      - Requests:  Show AlertDialog, ask the user if resend
+[x] Support for multiple location requests arriving during a single GPS fix

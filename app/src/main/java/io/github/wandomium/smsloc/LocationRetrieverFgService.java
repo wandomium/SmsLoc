@@ -16,22 +16,16 @@
  */
 package io.github.wandomium.smsloc;
 
-import android.app.ForegroundServiceStartNotAllowedException;
-import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.location.LocationManager;
-import android.os.Build;
-import android.os.IBinder;
+import android.util.Log;
 
-import androidx.annotation.Nullable;
-
-import io.github.wandomium.smsloc.data.file.LogFile;
 import io.github.wandomium.smsloc.data.unit.GpsData;
-import io.github.wandomium.smsloc.data.file.PeopleDataFile;
-import io.github.wandomium.smsloc.toolbox.NotificationHandler;
+import io.github.wandomium.smsloc.defs.SmsLoc_Common;
+import io.github.wandomium.smsloc.toolbox.ABaseFgService;
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 import io.github.wandomium.smsloc.toolbox.Utils;
@@ -40,70 +34,105 @@ import java.util.ArrayList;
 
 /**
  * Used to get GPS location when SMS request comes in
+ <p>
+ * EntryDataT = Integer and represents wakeLockId
+ * it can be retrieved with call to QueueEntry.data()
  */
-public class LocationRetrieverFgService extends Service implements LocationRetriever.LocCb
+public class LocationRetrieverFgService extends ABaseFgService<Integer> implements LocationRetriever.LocCb
 {
+    private static final String CLASS_TAG = LocationRetrieverFgService.class.getSimpleName();
 
-    private int mWakeLockId;
+    public static final int NOT_ID = SmsResendFgService.NOT_ID - 1;
 
-    protected String mTitle;
-    protected ArrayList<String> mDetails;
-    protected String mCallStatus;
+    private static final String TITLE_PREFIX = "Request from ";
+    private static final String STATUS_PREFIX = "Response ";
 
-    protected String mAddr;
+    private ArrayList<String> mDetails;
+    private String mCallStatus;
+    private String mSmsText;
+
+    private Integer mGpsTimeout;
+
+    public LocationRetrieverFgService() {
+        super(TITLE_PREFIX, STATUS_PREFIX, NOT_ID, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        mDetails = new ArrayList<>();
+        mCallStatus = "UNKNOWN";
+
+        // it is ok to get it here. subsequent calls to start will not start a new GPS fix
+        // when location cb returns, all calls will be stopped (queue will be drained)
+        // and service onDestroy called
+        mGpsTimeout = SmsLoc_Settings.GPS_TIMEOUT.getInt(this);
+
+        // create custom service notification
+        mServiceNotification = mNotHandler.createOngoigNotification(
+    "Location request",
+                String.format("Waiting for GPS fix. Timeout is %s min", mGpsTimeout),
+                null
+        );
+    }
+
+    @Override
+    public void onDestroy() {
+        if (mDetails != null) {
+            mDetails.clear();
+        }
+
+        mDetails = null;
+        mCallStatus = null;
+        mSmsText = null;
+        mGpsTimeout = null;
+    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
         super.onStartCommand(intent, flags, startId);
 
-        final PeopleDataFile PEOPLEDATA = PeopleDataFile.getInstance(getApplicationContext());
-
-        mWakeLockId = intent.getIntExtra(SmsLoc_Intents.EXTRA_WAKE_LOCK_ID, SmsReceiver.INVALID_WAKE_LOCK_ID);
-        mAddr = intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR);
-
-        mTitle = String.format("Request from %s",
-            PEOPLEDATA.containsId(mAddr) ?
-                PEOPLEDATA.getDataEntry(mAddr).getDisplayName() : Utils.unlistedDisplayName(mAddr));
-        mDetails = new ArrayList<>();
-        mCallStatus = "OK";
-
-        try {
-            // This one can throw
-            //* SecurityException because of permission issues, or
-            //* ForegroundServiceStartNotAllowedException (android 10 and later)
-            //* Or due to missing/invalid fg service types
-            // https://developer.android.com/develop/background-work/services/foreground-services (v12 - API31)
-            startForeground(startId,
-                NotificationHandler.getInstance(this).createOngoigNotification(
-                    mTitle, "Waiting for GPS fix", String.format("Timeout is: %s min", SmsLoc_Settings.GPS_TIMEOUT.getInt(this))),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-        }
-        catch (Exception e) {
-            if (Build.VERSION.SDK_INT >= 31 && e instanceof ForegroundServiceStartNotAllowedException) {
-                LogFile.getInstance(this).addLogEntry("Could not start GPS fix due to app's background restrictions");
-            }
-            else {
-                // These are actual bugs in the code - manifest mismatch
-                // InvalidForegroundServiceType, MissingForegroundServiceTypeException and SecurityException in 34
-                LogFile.getInstance(this).addLogEntry("BUG: Please report this\n" + e.getMessage());
-            }
-
-            stopSelf(startId);
-            return START_NOT_STICKY;
-        }
-
-        LocationRetriever.getLocation(
-                (long) SmsLoc_Settings.GPS_TIMEOUT.getInt(this) * Utils.MIN_2_MS, this, this
+        // Create a new entry for the queue
+        final QueueEntry<Integer> qEntry = new QueueEntry<>(
+                startId,
+                intent.getStringExtra(SmsLoc_Intents.EXTRA_ADDR),
+                intent.getIntExtra(SmsLoc_Intents.EXTRA_WAKE_LOCK_ID, SmsReceiver.INVALID_WAKE_LOCK_ID)
         );
 
+        // Start foreground service within 5s after call to onStartCommand
+        if (enqueueEntry(qEntry)) {
+            if (mQueue.size() == 1) {
+                // if this is the first in queue, start GPS, otherwise we assume it is running
+                mDetails.clear();
+                mCallStatus = "OK";
+                mSmsText = SmsUtils.RESPONSE_CODE + SmsLoc_Common.Consts.GPS_DATA_INVALID_ERR_STR;
+                LocationRetriever.getLocationWithGPS(
+                        (long) mGpsTimeout * Utils.MIN_2_MS, this, this
+                );
+            }
+        }
         return START_NOT_STICKY;
     }
 
+    // IMPL
+    @Override
+    protected boolean processEntry(QueueEntry<Integer> qEntry) {
+        return SmsUtils.sendSms(this, qEntry.addr(), mSmsText);
+    }
+    // OVERRIDES
+    @Override
+    protected void onProcessEntryDone(QueueEntry<Integer> queueEntry) {
+        super.onProcessEntryDone(queueEntry);
+        SmsReceiver.releaseWakeLock(queueEntry.data());
+    }
 
+    // LOCATION RECEIVER
     @Override
     public void onLocationRcvd(Location loc, String msg)
     {
+        Log.d(CLASS_TAG, "onLocationReceived");
         mDetails.add(msg);
         // Try to get last known location
         if (loc == null) try {
@@ -124,27 +153,13 @@ public class LocationRetrieverFgService extends Service implements LocationRetri
             mCallStatus = "INVALID";
             mDetails.add("GPS data invalid");
         }
-        if (!SmsUtils.sendSms(
-            this, mAddr, SmsUtils.RESPONSE_CODE + gpsData.toSmsText())) {
 
-            mCallStatus = "ERROR"; //this is more pressing than stale location
-            mDetails.add("Failed to send SMS (Check Log)");
-        }
-
-        // This automatically logs
-        NotificationHandler.getInstance(this).createAndPostNotification(
-            mTitle, "Response " + mCallStatus, mDetails.isEmpty() ? null : mDetails.toString());
-
-        stopForeground(STOP_FOREGROUND_REMOVE);
-        this.stopSelf();
-        //SmsReceiver.completeWakefulIntent(mIntent);
-        SmsReceiver.releaseWakeLock(mWakeLockId);
-    }
-
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent)
-    {
-        return null;
+        mSmsText = SmsUtils.RESPONSE_CODE + gpsData.toSmsText();
+        // In some bizarre situation where we get crazy amounts of location requests,
+        // this could loop forever but it is not a realistic scenario
+        getMainExecutor().execute(() -> drainQueue(
+            new ProcessResult(mCallStatus, "Sms send ERROR"),
+            mDetails.isEmpty() ? null : mDetails.toString()));
+        // TODO-low my location update intent
     }
 }

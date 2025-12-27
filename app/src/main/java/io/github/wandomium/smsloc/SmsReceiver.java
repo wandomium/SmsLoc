@@ -170,6 +170,8 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
     {
         final PeopleDataFile PEOPLEDATA = PeopleDataFile.getInstance(context);
         final SmsDayDataFile DAYDATA = SmsDayDataFile.getInstance(context);
+        final LogFile        LOGFILE = LogFile.getInstance(context);
+
 
         if (SmsLoc_Settings.IGNORE_WHITELIST.getBool(context) || PEOPLEDATA.containsId(addr)) {
 
@@ -183,6 +185,7 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
             intent.putExtra(SmsLoc_Intents.EXTRA_ADDR, addr);
             intent.putExtra(SmsLoc_Intents.EXTRA_WAKE_LOCK_ID, mCurrentLockId);
 
+            LOGFILE.addLogEntry("Request from " + Utils.getDisplayName(context, addr));
             try {
                 context.startForegroundService(intent);
             }
@@ -191,7 +194,7 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
                 //android.app.ForegroundServiceStartNotAllowedException – If the caller app's targeting API
                 //is Build.VERSION_CODES.S or later, and the foreground service is restricted from
                 //start due to background restriction.
-                LogFile.getInstance(context).addLogEntry(e.getMessage());
+                LOGFILE.addLogEntry(e.getMessage());
                 SmsUtils.sendSms(context, addr,
                     SmsUtils.RESPONSE_CODE + SmsLoc_Common.Consts.GPS_DATA_INVALID_ERR_STR);
                 _releaseCurrentWakeLock();
@@ -221,6 +224,7 @@ public class SmsReceiver extends BroadcastReceiver//WakefulBroadcastReceiver
             PEOPLEDATA.writeFileAsync();
 
             _releaseCurrentWakeLock();
+
             return SmsLoc_Intents.ACTION_NOT_WHITELISTED;
         }
     };

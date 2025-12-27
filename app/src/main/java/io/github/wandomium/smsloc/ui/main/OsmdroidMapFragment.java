@@ -66,6 +66,7 @@ public class OsmdroidMapFragment extends AMapFragment
     private final double mDefaultZoom = 12.0;
 
     private boolean mMapScrollModeOn = false;
+    private OnBackPressedCallback mBackPressedCb;
 
     public OsmdroidMapFragment() { super(R.layout.fragment_osmdroid);}
     public static OsmdroidMapFragment newInstance(final int position) {
@@ -244,12 +245,13 @@ public class OsmdroidMapFragment extends AMapFragment
 
     @SuppressLint("ClickableViewAccessibility")
     private void _configureMapScroll() {
-        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
+        mBackPressedCb = new OnBackPressedCallback(mMapScrollModeOn) {
             @Override
             public void handleOnBackPressed() {
-                mMapScrollModeOn = false;
+                setEnabled(mMapScrollModeOn = false);
             }
-        });
+        };
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), mBackPressedCb);
 
         mMapView.setOnTouchListener((v, event) -> {
             if (!mMapScrollModeOn && event.getActionMasked() == MotionEvent.ACTION_MOVE) {
@@ -259,7 +261,7 @@ public class OsmdroidMapFragment extends AMapFragment
                 final float vx = velocityTracker.getXVelocity();
                 // zeros are flukes
                 if (vx != 0.0f && Math.abs(vx) < 100f) {
-                    mMapScrollModeOn = true;
+                    mBackPressedCb.setEnabled(mMapScrollModeOn = true);
                 }
                 velocityTracker.recycle();
             }

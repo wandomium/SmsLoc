@@ -32,6 +32,7 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
@@ -76,6 +77,7 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
 
         <activity
             android:name="io.github.wandomium.smsloc.MainActivity"
+            android:launchMode="singleTask"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -91,7 +93,7 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
-        <receiver android:name="io.github.wandomium.smsloc.SmsSentReceiver" />
+        <receiver android:name="io.github.wandomium.smsloc.SmsSentStatusReceiver" />
         <receiver
             android:name="io.github.wandomium.smsloc.toolbox.NotificationHandler$NotGroupClearedRcv"
             android:exported="false">
@@ -102,6 +104,11 @@ along with SmsLoc. If not, see <https://www.gnu.org/licenses/>.
         <service
             android:name="io.github.wandomium.smsloc.LocationRetrieverFgService"
             android:foregroundServiceType="location"
+            android:enabled="true"
+            android:stopWithTask="false"/>
+        <service
+            android:name="io.github.wandomium.smsloc.SmsResendFgService"
+            android:foregroundServiceType="remoteMessaging"
             android:enabled="true"
             android:stopWithTask="false"/>
     </application>

@@ -76,7 +76,7 @@ public class LogFile extends BaseFile
     {
         synchronized (LOCK)
         {
-            mLogEntries.add(0,msg);
+            mLogEntries.add(0, msg == null ? " " : msg);
             mLogEntries.add(0, Utils.msToStr(System.currentTimeMillis()));
             mDiskUnsynced = true;
         }
