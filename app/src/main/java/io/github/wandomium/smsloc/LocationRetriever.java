@@ -25,6 +25,7 @@ import android.os.CancellationSignal;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.core.location.LocationListenerCompat;
 
 import java.util.Timer;
 import java.util.TimerTask; //TODO: TimerTask will never become a demon. keeps alive
@@ -37,7 +38,7 @@ import io.github.wandomium.smsloc.data.file.LogFile;
 /**
  * Single use class for retrieving location
  */
-public class LocationRetriever implements Consumer<Location>, LocationListener
+public class LocationRetriever implements Consumer<Location>, LocationListenerCompat
 {
     private final static String CLASS_TAG = LocationRetriever.class.getSimpleName();
 
