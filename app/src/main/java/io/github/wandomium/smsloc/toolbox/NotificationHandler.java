@@ -47,8 +47,7 @@ public class NotificationHandler
     private static final int SUMMARY_ID = 0;
     private static final int INIT_ID = 2;
 
-    private static int mNotId = INIT_ID;
-    private static boolean mNotRestart = true;
+    private int mNotId = INIT_ID;
 
     private final Context mAppContext;
     private final NotificationManagerCompat mNotificationMngr;
@@ -67,8 +66,6 @@ public class NotificationHandler
     }
     private NotificationHandler(Context context)
     {
-        mNotId = INIT_ID;
-        mNotRestart = true;
         // this one is a singleton so it's ok
         // app context will be alive as long as the app is alive, no weak ref needed
         mAppContext = context.getApplicationContext();
@@ -116,17 +113,14 @@ public class NotificationHandler
     /** Post notification to a group */
     public final synchronized int postNotification(Notification notification)
     {
-        if (mGroupingNotification == null) {
-            mGroupingNotification = createGroupingNotification();
-        }
         try {
-            if (mNotRestart) {
+            if (mGroupingNotification == null) {
+                mGroupingNotification = createGroupingNotification();
                 mNotificationMngr.notify(SUMMARY_ID, mGroupingNotification);
-                mNotRestart = false;
             }
 
-            mNotificationMngr.notify(mNotId++, notification);
-            return mNotId - 1;  //if we want to update the notification later on
+            mNotificationMngr.notify(mNotId, notification);
+            return mNotId++;  //if we want to update the notification later on
         }
         catch (SecurityException e) {
             LogFile.getInstance(mAppContext).addLogEntry("ERROR: Missing POST_NOTIFICATION permission");
@@ -182,7 +176,7 @@ public class NotificationHandler
         if (extra != null && !extra.isEmpty())
         {
             builder.setStyle(new NotificationCompat.BigTextStyle().bigText(
-                    String.format("%s\n%s", content,extra)));
+                    String.format("%s\n%s", content, extra)));
             logText.append(", details: ").append(extra);
         }
 
@@ -193,10 +187,12 @@ public class NotificationHandler
     protected final Notification createGroupingNotification()
     {
         final Intent intent = new Intent(mAppContext, NotGroupClearedRcv.class).setAction("notification_cancelled");
-        final PendingIntent deleteIntent = PendingIntent.getBroadcast(mAppContext, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+        final PendingIntent deleteIntent = PendingIntent.getBroadcast(mAppContext, 1, intent, PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder =
                 new NotificationCompat.Builder(mAppContext, CHANNEL_ID)
+                        .setContentTitle("SmsLoc")
+                        .setContentText("Grouping notification")
                         .setSmallIcon(R.drawable.ic_logo_24)
                         .setGroup(GROUP_ID).setGroupSummary(true)
                         .setAutoCancel(true)
@@ -205,7 +201,12 @@ public class NotificationHandler
         return builder.build();
     }
 
-    public final synchronized void restartNotifications() { mNotRestart = true; }
+    protected final void restartNotifications() {
+        LogFile.getInstance(mAppContext).addLogEntry("restartNotifications");
+        synchronized (this) {
+            mGroupingNotification = null;
+        }
+    }
     public static class NotGroupClearedRcv extends BroadcastReceiver
     {
         @Override

@@ -31,6 +31,7 @@ import io.github.wandomium.smsloc.defs.SmsLoc_Settings;
 import io.github.wandomium.smsloc.toolbox.Utils;
 
 import java.util.ArrayList;
+import java.util.concurrent.Executor;
 
 /**
  * Used to get GPS location when SMS request comes in
@@ -42,6 +43,8 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
 {
     private static final String CLASS_TAG = LocationRetrieverFgService.class.getSimpleName();
 
+    public static final int NOT_ID = SmsResendFgService.NOT_ID - 1;
+
     private static final String TITLE_PREFIX = "Request from ";
     private static final String STATUS_PREFIX = "Response ";
 
@@ -52,7 +55,7 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
     private Integer mGpsTimeout;
 
     public LocationRetrieverFgService() {
-        super(TITLE_PREFIX, STATUS_PREFIX, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+        super(TITLE_PREFIX, STATUS_PREFIX, NOT_ID, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
     }
 
     @Override
@@ -155,10 +158,11 @@ public class LocationRetrieverFgService extends ABaseFgService<Integer> implemen
         mSmsText = SmsUtils.RESPONSE_CODE + gpsData.toSmsText();
         // In some bizarre situation where we get crazy amounts of location requests,
         // this could loop forever but it is not a realistic scenario
-        drainQueue(
-                new ProcessResult(mCallStatus, "Sms send ERROR"),
-                mDetails.isEmpty() ? null : mDetails.toString());
-
+        getMainExecutor().execute(() -> {
+                drainQueue(
+                    new ProcessResult(mCallStatus, "Sms send ERROR"),
+                    mDetails.isEmpty() ? null : mDetails.toString(), getMainExecutor());
+                });
         // TODO-low my location update intent
     }
 }

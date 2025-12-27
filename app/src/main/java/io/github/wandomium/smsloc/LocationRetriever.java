@@ -26,9 +26,11 @@ import android.os.CancellationSignal;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.util.Timer;
 import java.util.TimerTask; //TODO: TimerTask will never become a demon. keeps alive
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -168,7 +170,8 @@ public class LocationRetriever implements Consumer<Location>, LocationListener
         Log.d(CLASS_TAG, "location callback");
         mLocCb.onLocationRcvd(location, msg);
 
-        mExecutor.shutdownNow();
+//        mExecutor.shutdownNow();
+        mExecutor.shutdown();
 
         // null all references to avoid dangling
         mCancelSignal = null;

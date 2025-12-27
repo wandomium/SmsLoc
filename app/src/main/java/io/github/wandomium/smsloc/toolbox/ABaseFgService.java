@@ -6,12 +6,12 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
-import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.ServiceCompat;
 
 import java.util.ArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import io.github.wandomium.smsloc.data.file.LogFile;
@@ -23,11 +23,13 @@ public abstract class ABaseFgService<EntryDataT> extends Service
     protected final String cTitlePrefix;
     protected final String cStatusPrefix;
     protected final int cServiceType;
+    protected final int cNotId;
 
-    protected ABaseFgService(String titlePx, String statusPx, int sType) {
+    protected ABaseFgService(String titlePx, String statusPx, int notifId, int sType) {
         super();
         this.cTitlePrefix  = titlePx;
         this.cStatusPrefix = statusPx;
+        this.cNotId = notifId;
         this.cServiceType  = sType;
     }
 
@@ -69,7 +71,7 @@ public abstract class ABaseFgService<EntryDataT> extends Service
         }
 
         mQueue = null;
-        mNotHandler = null;
+//        mNotHandler = null;
         mServiceNotification = null;
 
         super.onDestroy();
@@ -79,8 +81,7 @@ public abstract class ABaseFgService<EntryDataT> extends Service
     @Override
     public IBinder onBind(Intent intent) { return null; }
 
-
-    protected void onProcessEntryDoneWNot(QueueEntry<EntryDataT> qEntry, final String status, final String detail) {
+    protected void onProcessAbort(QueueEntry<EntryDataT> qEntry, final String status, final String detail) {
         mNotHandler.createAndPostNotification(
     cTitlePrefix + Utils.getDisplayName(this, qEntry.addr),
          cStatusPrefix + status,
@@ -104,12 +105,11 @@ public abstract class ABaseFgService<EntryDataT> extends Service
 
         // call startForeground within 5s, notification is the same for all calls
         try {
-            ServiceCompat.startForeground(this, qEntry.startId(),
-                mServiceNotification, cServiceType);
+            ServiceCompat.startForeground(this, cNotId, mServiceNotification, cServiceType);
         }
         catch (Exception e) {
             // security exceptions mostly
-            onProcessEntryDoneWNot(qEntry, "FAIL", "Could not start service (check log)");
+            onProcessAbort(qEntry, "FAIL", "Could not start service (check log)");
             LogFile.getInstance(this).addLogEntry(_getExceptionString(e));
             return false;
         }
@@ -118,26 +118,35 @@ public abstract class ABaseFgService<EntryDataT> extends Service
         if (!mQueue.offer(qEntry)) {
             // should really not get here in normal operation
             // TODO: limit queue size?
-            onProcessEntryDoneWNot(qEntry, "FAIL", "queue full");
+            onProcessAbort(qEntry, "FAIL", "queue full");
             return false;
         }
         return true;
     }
 
-    protected void drainQueue(final ProcessResult processResult, final String detail)
+    protected void drainQueue(final ProcessResult processResult, final String detail, Executor executor)
     {
         while(mQueue != null && !mQueue.isEmpty()) {
-            if (mQueue.size() == 1) {
-                QueueEntry<EntryDataT> qEntry = mQueue.poll();
-                final boolean processOk = processEntry(qEntry);
-                onProcessEntryDoneWNot(
-                    qEntry, processResult.getString(processOk), detail);
+            final int numEntries = mQueue.size();
+            ArrayList<QueueEntry<EntryDataT>> entries = new ArrayList<>(numEntries);
+            mQueue.drainTo(entries);
+
+            final String title = cTitlePrefix +
+               (numEntries == 1 ? Utils.getDisplayName(this, entries.get(0).addr) : "[multiple]");
+
+            if (numEntries == 1) {
+                final boolean processOk = processEntry(entries.get(0));
+                getMainExecutor().execute(() -> {
+                    final Notification not = mNotHandler
+                        .createNotification(title,
+                            cStatusPrefix + processResult.getString(processOk), detail);
+                    // final notification
+                    startForeground(cNotId, not);
+                    stopForeground(STOP_FOREGROUND_DETACH);});
+                    onProcessEntryDone(entries.get(0));
             }
             else {
                 boolean joinedResultOk = true;
-                final int numEntries = mQueue.size();
-                ArrayList<QueueEntry<EntryDataT>> entries = new ArrayList<>(numEntries);
-                mQueue.drainTo(entries);
 
                 final LogFile LOGFILE = LogFile.getInstance(this);
                 if (detail != null) {
@@ -145,26 +154,33 @@ public abstract class ABaseFgService<EntryDataT> extends Service
                 }
 
                 for (int i = 0; i < numEntries; i++) {
-                    QueueEntry<EntryDataT> qEntry = entries.get(i);
+                    final QueueEntry<EntryDataT> qEntry = entries.get(i);
                     final boolean processOk = processEntry(qEntry); //this one already logs
                     if (!processOk) {
                         joinedResultOk = false;
                     }
+
                     // log for every item
                     LOGFILE.addLogEntry(
                         cTitlePrefix + Utils.getDisplayName(this, qEntry.addr)
                             + ": " + cStatusPrefix + processResult.getString(processOk)
                     );
+
                     // notify only for last item
                     if (i == numEntries - 1) {
-                        mNotHandler.createAndPostNotification(
-                cTitlePrefix + "[multiple]",
-                    cStatusPrefix +
-                            (joinedResultOk ? processResult.okStr : "ERROR (check log)"),
-                             joinedResultOk ? detail : null
-                        );
+                        boolean finalJoinedResultOk = joinedResultOk;
+                        getMainExecutor().execute(() -> {
+                            final Notification not = mNotHandler.createNotification(
+                                    title,
+                                    cStatusPrefix + (finalJoinedResultOk ? processResult.okStr : "ERROR (check log)"),
+                                    finalJoinedResultOk ? detail : null
+                            );
+                            // final notification
+                            startForeground(cNotId, not);
+                            stopForeground(STOP_FOREGROUND_DETACH);
+                        });
                     }
-                    onProcessEntryDone(qEntry);
+                    getMainExecutor().execute(() -> onProcessEntryDone(qEntry));
                     // IMPORTANT: onDestroy can get called here,
                     // queue & nothandler can become null!!!
                 }

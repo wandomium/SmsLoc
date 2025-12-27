@@ -13,6 +13,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
+import java.util.concurrent.Executor;
+
 import io.github.wandomium.smsloc.defs.SmsLoc_Intents;
 import io.github.wandomium.smsloc.toolbox.ABaseFgService;
 
@@ -28,8 +30,10 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
 {
     private static final String CLASS_TAG = SmsResendFgService.class.getSimpleName();
 
+    public static final int NOT_ID = Integer.MAX_VALUE;
     // TODO make this configurable
     public static final int NUM_RETRIES = 3;
+
 
     public record SmsData(String msg, int retryCnt){};
 
@@ -41,7 +45,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
     public SmsResendFgService() {
 //        final boolean isResponse = SmsUtils.isResponseSms(qEntry.data().msg);
 //        return "Resend " + (isResponse ? "response" : "request") + " to ";
-        super(TITLE_PREFIX, STATUS_PREFIX, ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING);
+        super(TITLE_PREFIX, STATUS_PREFIX, NOT_ID, ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING);
     }
 
     @Override
@@ -87,7 +91,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         // do not retry indefinitely - since we wait for network, this should not
         // be an issue unless sms in malformed
         if (qEntry.data().retryCnt > NUM_RETRIES) {
-            onProcessEntryDoneWNot(qEntry, "FAIL", "Max retries reached (" + NUM_RETRIES + ")");
+            onProcessAbort(qEntry, "FAIL", "Max retries reached (" + NUM_RETRIES + ")");
             return START_NOT_STICKY;
         }
 
@@ -103,11 +107,11 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
     }
 
     // SERVICE STATE MONITORING
-    protected void _onServiceStateChanged(ServiceState serviceState) {
+    protected void _onServiceStateChanged(ServiceState serviceState, Executor executor) {
         if (serviceState.getState() == ServiceState.STATE_IN_SERVICE) {
             drainQueue(
                 new ProcessResult("SUCCESS", "FAIL"),
-                null);
+                null, executor);
         }
     }
     private class ServiceStateListener
@@ -115,9 +119,11 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         private final TelephonyManager cTelMngr;
         private final Legacy cLegacy;
         private final Modern cModern;
+        private final Executor cExecutor;
 
         public ServiceStateListener() {
             cTelMngr = (TelephonyManager) getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
+            cExecutor = getMainExecutor();
 
             if (Build.VERSION.SDK_INT < 31) {
                 cLegacy = new Legacy();
@@ -133,7 +139,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
             if (Build.VERSION.SDK_INT < 31) {
                 cTelMngr.listen(cLegacy, PhoneStateListener.LISTEN_SERVICE_STATE);
             } else {
-                cTelMngr.registerTelephonyCallback(getMainExecutor(), cModern);
+                cTelMngr.registerTelephonyCallback(cExecutor, cModern);
             }
         }
 
@@ -149,7 +155,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         private class Legacy extends PhoneStateListener {
             @Override
             public void onServiceStateChanged(ServiceState serviceState) {
-                SmsResendFgService.this._onServiceStateChanged(serviceState);
+                SmsResendFgService.this._onServiceStateChanged(serviceState, cExecutor);
             }
         }
 
@@ -157,7 +163,7 @@ public class SmsResendFgService extends ABaseFgService<SmsResendFgService.SmsDat
         private class Modern extends TelephonyCallback implements TelephonyCallback.ServiceStateListener {
             @Override
             public void onServiceStateChanged(@NonNull ServiceState serviceState) {
-                SmsResendFgService.this._onServiceStateChanged(serviceState);
+                SmsResendFgService.this._onServiceStateChanged(serviceState, cExecutor);
             }
         }
     }
