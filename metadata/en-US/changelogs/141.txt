@@ -1,0 +1,6 @@
+[] add warning when new version is available
+[] add export log button
+[] remove old files (on midnight)
+
+bugfixes:
+[] remove double print of details in drain queue
