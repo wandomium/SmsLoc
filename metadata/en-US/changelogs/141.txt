@@ -2,5 +2,7 @@
 [] add export log button
 [] remove old files (on midnight)
 
-bugfixes:
+fixes:
 [] remove double print of details in drain queue
+[] remove call that puts drainQueue call in location fg service on main looper. Calls are already made in base fg service where necessary 
+
